@@ -43,7 +43,7 @@ export function CartSheet({
     })
     .filter((l): l is { product: (typeof allProducts)[number]; quantity: number } => l !== null)
 
-  const estimatedSubtotal = lines.reduce((sum, l) => sum + l.product.current_price * l.quantity, 0)
+  const estimatedSubtotal = lines.reduce((sum, l) => sum + (l.product.current_price ?? 0) * l.quantity, 0)
 
   return (
     <div className="flex min-h-dvh flex-col p-4">
@@ -64,7 +64,11 @@ export function CartSheet({
             <div key={product.id} className="flex items-center justify-between rounded-xl border border-neutral-200 bg-white p-3">
               <div>
                 <p className="text-sm font-medium">{product.name}</p>
-                <p className="text-xs text-neutral-600">${product.current_price.toFixed(2)} each</p>
+                {product.current_price !== null ? (
+                  <p className="text-xs text-neutral-600">${product.current_price.toFixed(2)} each</p>
+                ) : (
+                  <p className="text-xs text-red-600">Just sold out — remove to continue</p>
+                )}
               </div>
               <div className="flex items-center gap-3 rounded-lg bg-neutral-100">
                 <button

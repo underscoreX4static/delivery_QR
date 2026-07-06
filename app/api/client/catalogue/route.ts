@@ -30,10 +30,12 @@ export async function GET(request: NextRequest) {
     }))
   )
 
+  // Out-of-stock products (current_price null — no active batch with remaining
+  // stock) are still shown, not hidden; the client sorts them to the bottom.
   const result = (categories as Category[]).map((category) => ({
     ...category,
     products: productsWithPrice
-      .filter((p) => p.category_id === category.id && p.current_price !== null)
+      .filter((p) => p.category_id === category.id)
       .sort((a, b) => a.name.localeCompare(b.name)),
   }))
 
