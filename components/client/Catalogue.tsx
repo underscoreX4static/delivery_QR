@@ -26,8 +26,11 @@ export function Catalogue({
     <div className="pb-24">
       <header className="sticky top-0 z-10 flex items-center justify-between bg-neutral-50/95 px-4 py-4 backdrop-blur">
         <h1 className="text-lg font-semibold">HAZE Delivery</h1>
-        <button onClick={onViewOrders} className="text-sm font-medium text-neutral-600">
-          My orders
+        <button
+          onClick={onViewOrders}
+          className="rounded-full bg-neutral-900 px-3 py-1.5 text-xs font-medium text-white"
+        >
+          📦 My orders
         </button>
       </header>
 
