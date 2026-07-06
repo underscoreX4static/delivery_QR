@@ -1,5 +1,6 @@
 import { getAdminSession } from '@/lib/supabase-server'
 import { AdminNav } from '@/components/admin/AdminNav'
+import { MobileNav } from '@/components/admin/MobileNav'
 import { SignOutButton } from '@/components/admin/SignOutButton'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -10,8 +11,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (!user) return <>{children}</>
 
   return (
-    <div className="flex min-h-dvh">
-      <aside className="flex w-56 shrink-0 flex-col justify-between border-r border-neutral-200 bg-white p-4">
+    <div className="flex min-h-dvh flex-col sm:flex-row">
+      <MobileNav userEmail={user.email ?? ''} />
+
+      <aside className="hidden w-56 shrink-0 flex-col justify-between border-r border-neutral-200 bg-white p-4 sm:flex">
         <div>
           <h1 className="mb-6 px-3 text-lg font-semibold">HAZE Admin</h1>
           <AdminNav />
@@ -21,7 +24,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <SignOutButton />
         </div>
       </aside>
-      <main className="flex-1 overflow-y-auto bg-neutral-50 p-6">{children}</main>
+
+      <main className="flex-1 overflow-y-auto bg-neutral-50 px-4 py-4 sm:px-6 sm:py-6">{children}</main>
     </div>
   )
 }

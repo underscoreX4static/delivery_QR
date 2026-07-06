@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
   // Postcode validated SERVER-SIDE only — never trust the client for this.
   if (!isAddressInDeliveryZone(deliveryAddress)) {
     return NextResponse.json(
-      { error: 'That address is outside our Brisbane delivery zone' },
+      { error: 'Sorry, we do not deliver to that address. We cover Brisbane CBD and inner suburbs only.' },
       { status: 400 }
     )
   }

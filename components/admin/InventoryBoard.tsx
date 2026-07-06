@@ -69,7 +69,7 @@ export function InventoryBoard() {
   return (
     <div className="flex flex-col gap-4">
       {stats && (
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <StatTile label="Total SKUs" value={stats.total_skus} />
           <StatTile label="🔴 Restock needed" value={stats.needing_restock} />
           <StatTile label="🟡 Order soon" value={stats.order_soon} />
@@ -97,7 +97,35 @@ export function InventoryBoard() {
         </select>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-neutral-200 bg-white">
+      {/* Mobile: card list */}
+      <div className="flex flex-col gap-2 sm:hidden">
+        {filteredRows.map((row) => (
+          <div key={row.id} className="rounded-xl border border-neutral-200 bg-white p-4 text-xs">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="text-sm font-medium">{row.name}</p>
+                <p className="text-neutral-600">{row.brand}</p>
+              </div>
+              <span>{STATUS_BADGE[row.status]}</span>
+            </div>
+            <div className="mt-2 grid grid-cols-2 gap-1 text-neutral-600">
+              <span>Tier: {TIER_BADGE[row.velocity_tier]}</span>
+              <span>Stock: {row.stock_qty}</span>
+              <span>Days left: {row.days_remaining !== null ? row.days_remaining.toFixed(1) : '—'}</span>
+              <span>Avg/day: {row.avg_daily_units.toFixed(2)}</span>
+              <span>Profit 30d: ${row.profit_30d.toFixed(2)}</span>
+              <span>Revenue 30d: ${row.revenue_30d.toFixed(2)}</span>
+            </div>
+            <a href={`/admin/products?product=${row.id}`} className="mt-2 block rounded-lg bg-neutral-100 py-2 text-center font-medium text-blue-600">
+              ➕ New batch
+            </a>
+          </div>
+        ))}
+        {filteredRows.length === 0 && <p className="text-sm text-neutral-600">No products match this filter.</p>}
+      </div>
+
+      {/* Desktop: table */}
+      <div className="hidden overflow-x-auto rounded-xl border border-neutral-200 bg-white sm:block">
         <table className="w-full text-left text-xs">
           <thead className="bg-neutral-50 text-neutral-600">
             <tr>
@@ -127,7 +155,7 @@ export function InventoryBoard() {
                 <td className="px-3 py-2">${row.profit_30d.toFixed(2)}</td>
                 <td className="px-3 py-2">${row.revenue_30d.toFixed(2)}</td>
                 <td className="px-3 py-2">
-                  <a href={`/admin/products#product-${row.id}`} className="text-blue-600">
+                  <a href={`/admin/products?product=${row.id}`} className="text-blue-600">
                     ➕ New batch
                   </a>
                 </td>

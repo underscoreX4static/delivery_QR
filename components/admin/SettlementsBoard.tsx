@@ -113,10 +113,10 @@ export function SettlementsBoard() {
         </div>
 
         <div className="rounded-xl border border-neutral-200 bg-white p-4">
-          <h2 className="mb-3 text-sm font-semibold">Partner settlement (on-demand)</h2>
+          <h2 className="mb-3 text-sm font-semibold">Commercial settlement (on-demand)</h2>
           <div className="flex flex-wrap gap-2">
             <select value={partnerId} onChange={(e) => setPartnerId(e.target.value)} className="rounded border border-neutral-300 px-2 py-1 text-xs">
-              <option value="">Select partner…</option>
+              <option value="">Select commercial…</option>
               {partners.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
@@ -144,7 +144,7 @@ export function SettlementsBoard() {
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
                 <p className="text-sm font-semibold">
-                  {s.type === 'driver' ? `${s.drivers?.first_name ?? 'Driver'} ${s.drivers?.last_name ?? ''}` : s.partner_name ?? 'Partner'}
+                  {s.type === 'driver' ? `${s.drivers?.first_name ?? 'Driver'} ${s.drivers?.last_name ?? ''}` : s.partner_name ?? 'Commercial'}
                 </p>
                 <p className="text-xs text-neutral-600">
                   {s.period_start} → {s.period_end}

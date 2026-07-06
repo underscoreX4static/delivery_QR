@@ -57,7 +57,10 @@ export function DriversBoard() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex justify-end">
-        <button onClick={() => setShowNewForm((v) => !v)} className="rounded-lg bg-black px-3 py-1.5 text-xs font-medium text-white">
+        <button
+          onClick={() => setShowNewForm((v) => !v)}
+          className="rounded-lg bg-black px-4 py-3 text-sm font-medium text-white sm:py-1.5 sm:text-xs"
+        >
           {showNewForm ? 'Close' : 'New driver'}
         </button>
       </div>
@@ -65,38 +68,62 @@ export function DriversBoard() {
       {showNewForm && (
         <div className="rounded-xl border border-neutral-200 bg-white p-4">
           <h2 className="mb-3 text-sm font-semibold">New driver</h2>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             <input
               placeholder="Telegram ID"
               value={telegramId}
               onChange={(e) => setTelegramId(e.target.value)}
-              className="rounded border border-neutral-300 px-2 py-1 text-xs"
+              className="rounded-lg border border-neutral-300 px-3 py-2 text-base sm:text-xs"
             />
             <input
               placeholder="First name"
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
-              className="rounded border border-neutral-300 px-2 py-1 text-xs"
+              className="rounded-lg border border-neutral-300 px-3 py-2 text-base sm:text-xs"
             />
             <input
               placeholder="Last name"
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
-              className="rounded border border-neutral-300 px-2 py-1 text-xs"
+              className="rounded-lg border border-neutral-300 px-3 py-2 text-base sm:text-xs"
             />
           </div>
           {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
           <button
             onClick={create}
             disabled={submitting || !telegramId || !firstName}
-            className="mt-3 rounded-lg bg-black px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+            className="mt-3 w-full rounded-lg bg-black py-3 text-sm font-medium text-white disabled:opacity-50 sm:w-auto sm:px-3 sm:py-1.5 sm:text-xs"
           >
             Create driver
           </button>
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-xl border border-neutral-200 bg-white">
+      {/* Mobile: card list */}
+      <div className="flex flex-col gap-2 sm:hidden">
+        {drivers.map((d) => (
+          <div key={d.id} className="rounded-xl border border-neutral-200 bg-white p-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium">
+                {d.first_name} {d.last_name}
+                {d.is_owner && <span className="ml-2 rounded-full bg-black px-2 py-0.5 text-[10px] text-white">Owner</span>}
+              </p>
+              <span className="text-xs">{d.is_active ? 'Active' : 'Inactive'}</span>
+            </div>
+            <p className="mt-1 text-xs text-neutral-600">{d.telegram_id}</p>
+            <p className="text-xs text-neutral-600">{d.active_orders} active orders</p>
+            {!d.is_owner && (
+              <button onClick={() => toggleActive(d)} className="mt-2 w-full rounded-lg bg-neutral-100 py-2 text-xs font-medium text-neutral-700">
+                {d.is_active ? 'Deactivate' : 'Activate'}
+              </button>
+            )}
+          </div>
+        ))}
+        {drivers.length === 0 && <p className="text-sm text-neutral-600">No drivers yet.</p>}
+      </div>
+
+      {/* Desktop: table */}
+      <div className="hidden overflow-x-auto rounded-xl border border-neutral-200 bg-white sm:block">
         <table className="w-full text-left text-sm">
           <thead className="bg-neutral-50 text-xs text-neutral-600">
             <tr>

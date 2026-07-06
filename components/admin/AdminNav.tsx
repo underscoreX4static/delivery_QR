@@ -7,7 +7,8 @@ const LINKS = [
   { href: '/admin/orders', label: 'Orders' },
   { href: '/admin/products', label: 'Products' },
   { href: '/admin/inventory', label: 'Inventory' },
-  { href: '/admin/partners', label: 'Partners' },
+  { href: '/admin/customers', label: 'Customers' },
+  { href: '/admin/partners', label: 'Commercials' },
   { href: '/admin/qr-codes', label: 'QR Codes' },
   { href: '/admin/drivers', label: 'Drivers' },
   { href: '/admin/settlements', label: 'Settlements' },
@@ -27,7 +28,7 @@ export function AdminNav() {
           <Link
             key={link.href}
             href={link.href}
-            className={`rounded-lg px-3 py-2 text-sm font-medium ${
+            className={`flex min-h-11 items-center rounded-lg px-3 py-3 text-sm font-medium sm:py-2 ${
               active ? 'bg-black text-white' : 'text-neutral-600 hover:bg-neutral-100'
             }`}
           >

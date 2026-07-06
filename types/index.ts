@@ -52,6 +52,8 @@ export interface User {
   default_address: string | null
   first_qr_source: string | null
   created_at: string
+  /** Requires migration: alter table users add column if not exists notes text; */
+  notes?: string | null
 }
 
 export interface Category {

@@ -64,7 +64,7 @@ export function QrCodesBoard() {
         <h2 className="mb-3 text-sm font-semibold">Generate QR code</h2>
         <div className="flex flex-wrap items-center gap-2">
           <select value={partnerId} onChange={(e) => setPartnerId(e.target.value)} className="rounded border border-neutral-300 px-2 py-1 text-xs">
-            <option value="">Select partner…</option>
+            <option value="">Select commercial…</option>
             {partners.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}
@@ -93,7 +93,7 @@ export function QrCodesBoard() {
           <div key={qr.id} className="rounded-xl border border-neutral-200 bg-white p-4">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
-                <p className="text-sm font-semibold">{qr.partners?.name ?? 'Unknown partner'}</p>
+                <p className="text-sm font-semibold">{qr.partners?.name ?? 'Unknown commercial'}</p>
                 <p className="text-xs text-neutral-600">{qr.label ?? qr.slug}</p>
                 <p className="text-xs text-neutral-600">https://t.me/{botUsername}?start=qr_{qr.slug}</p>
               </div>
