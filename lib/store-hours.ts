@@ -1,4 +1,4 @@
-import { addMinutes, format } from 'date-fns'
+import { addMinutes, format, startOfMonth, startOfWeek } from 'date-fns'
 import type { StoreSettings } from '@/lib/settings'
 
 // Brisbane is UTC+10 year-round — Queensland does not observe daylight saving.
@@ -99,4 +99,23 @@ export function getBrisbaneDayBounds(now: Date = new Date()): { start: Date; end
 /** YYYY-MM-DD date string for "today" in Brisbane, for settlements.period_start/end columns. */
 export function getBrisbaneDateString(now: Date = new Date()): string {
   return format(toBrisbaneWallClock(now), 'yyyy-MM-dd')
+}
+
+export type EarningsPeriod = 'today' | 'week' | 'month' | 'all'
+
+/** Start-of-period UTC instant in Brisbane wall-clock terms, for the admin earnings tabs. */
+export function getBrisbanePeriodStart(period: EarningsPeriod, now: Date = new Date()): Date | null {
+  if (period === 'all') return null
+
+  const wallClockNow = toBrisbaneWallClock(now)
+  if (period === 'today') return fromBrisbaneWallClock(startOfBrisbaneDay(wallClockNow))
+  if (period === 'week') return fromBrisbaneWallClock(startOfWeek(wallClockNow, { weekStartsOn: 1 }))
+  return fromBrisbaneWallClock(startOfMonth(wallClockNow))
+}
+
+/** Brisbane-local hour-of-day (0-23) and day-of-week (0=Sunday) for a UTC instant — used for the schedule heatmap. */
+export function getBrisbaneHourAndWeekday(utcDate: Date | string): { hour: number; weekday: number } {
+  const date = typeof utcDate === 'string' ? new Date(utcDate) : utcDate
+  const wallClock = toBrisbaneWallClock(date)
+  return { hour: wallClock.getUTCHours(), weekday: wallClock.getUTCDay() }
 }
