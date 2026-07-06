@@ -6,7 +6,7 @@ import { calculateOrderPricing } from '@/lib/calculations'
 import { getSettings } from '@/lib/settings'
 import { isStoreOpenNow } from '@/lib/store-hours'
 import { isAddressInDeliveryZone } from '@/lib/zones'
-import { sendNewOrderNotification } from '@/lib/telegram'
+import { sendMessage, sendNewOrderNotification } from '@/lib/telegram'
 import type { CartLineItem } from '@/types/index'
 
 export async function GET(request: NextRequest) {
@@ -136,6 +136,10 @@ export async function POST(request: NextRequest) {
     ].join('\n')
 
     await sendNewOrderNotification(order.id, summary)
+    await sendMessage(
+      telegramUser.telegram_id,
+      `✅ Your order #${order.id.slice(0, 8)} has been received!\nWe'll confirm it in just a moment.`
+    )
 
     return NextResponse.json({ order })
   } catch (err) {

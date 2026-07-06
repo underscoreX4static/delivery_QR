@@ -54,25 +54,39 @@ export async function editMessageReplyMarkup(
 }
 
 /**
- * Commercials get an extra /mystats entry in their own command menu via a
- * chat-scoped override — the default menu (set once, applies to everyone)
- * intentionally excludes it so regular customers never see it.
+ * The default command menu (set once, applies to every user) only has
+ * /start — role-specific commands (/orders for drivers, /mystats for
+ * commercials) are added per-chat via Telegram's chat-scoped command menus,
+ * so regular customers never see commands meant for someone else.
  */
-export async function setCommercialCommands(chatId: string | number) {
-  return telegramRequest('setMyCommands', {
-    scope: { type: 'chat', chat_id: chatId },
-    commands: [
-      { command: 'start', description: 'Start ordering' },
-      { command: 'mystats', description: 'View your referral stats' },
-    ],
-  })
+async function setChatCommands(chatId: string | number, commands: { command: string; description: string }[]) {
+  return telegramRequest('setMyCommands', { scope: { type: 'chat', chat_id: chatId }, commands })
 }
 
-/** Removes the chat-scoped override, falling back to the default (customer) command menu. */
+async function clearChatCommands(chatId: string | number) {
+  return telegramRequest('deleteMyCommands', { scope: { type: 'chat', chat_id: chatId } })
+}
+
+export async function setCommercialCommands(chatId: string | number) {
+  return setChatCommands(chatId, [
+    { command: 'start', description: 'Start ordering' },
+    { command: 'mystats', description: 'View your referral stats' },
+  ])
+}
+
 export async function clearCommercialCommands(chatId: string | number) {
-  return telegramRequest('deleteMyCommands', {
-    scope: { type: 'chat', chat_id: chatId },
-  })
+  return clearChatCommands(chatId)
+}
+
+export async function setDriverCommands(chatId: string | number) {
+  return setChatCommands(chatId, [
+    { command: 'start', description: 'Start ordering' },
+    { command: 'orders', description: 'View available orders' },
+  ])
+}
+
+export async function clearDriverCommands(chatId: string | number) {
+  return clearChatCommands(chatId)
 }
 
 export async function notifyOwner(text: string, replyMarkup?: InlineKeyboardMarkup) {

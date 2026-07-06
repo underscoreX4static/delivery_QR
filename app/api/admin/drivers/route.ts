@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin-auth'
 import { supabaseAdmin } from '@/lib/supabase'
+import { setDriverCommands } from '@/lib/telegram'
 import type { Driver } from '@/types/index'
 
 const ACTIVE_ORDER_STATUSES = ['pending', 'confirmed', 'preparing', 'on_the_way']
@@ -51,5 +52,8 @@ export async function POST(request: NextRequest) {
     .single()
 
   if (error || !driver) return NextResponse.json({ error: error?.message ?? 'Failed to create driver' }, { status: 500 })
+
+  await setDriverCommands(telegramId).catch(() => {})
+
   return NextResponse.json({ driver })
 }
