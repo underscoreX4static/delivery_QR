@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { useTelegram } from '@/components/client/TelegramProvider'
 import type { Order } from '@/types/index'
 
@@ -34,7 +35,13 @@ export function OrderConfirmation({ orderId, onDone }: { orderId: string; onDone
       <p className="text-sm text-neutral-600">
         We&apos;ll notify you here as your order is confirmed and on its way.
       </p>
-      <button onClick={onDone} className="mt-4 rounded-xl bg-black px-6 py-3 font-medium text-white">
+      <Link
+        href={`/chat?order=${orderId}`}
+        className="mt-2 rounded-xl border border-neutral-300 px-6 py-3 font-medium text-neutral-900"
+      >
+        💬 Chat about this order
+      </Link>
+      <button onClick={onDone} className="rounded-xl bg-black px-6 py-3 font-medium text-white">
         Back to catalogue
       </button>
     </div>

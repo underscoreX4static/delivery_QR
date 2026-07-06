@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { AdminChatPanel } from '@/components/admin/AdminChatPanel'
 import type { Driver, Order, OrderItem, OrderStatus } from '@/types/index'
 
 interface AdminOrder extends Order {
@@ -33,6 +34,7 @@ export function OrdersBoard() {
   const [cancellingId, setCancellingId] = useState<string | null>(null)
   const [cancelReason, setCancelReason] = useState('')
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [chatOpenId, setChatOpenId] = useState<string | null>(null)
 
   useEffect(() => {
     const loadOrders = () => fetch('/api/admin/orders').then((r) => r.json()).then((d) => setOrders(d.orders ?? []))
@@ -152,7 +154,15 @@ export function OrdersBoard() {
                 Cancel
               </ActionButton>
             )}
+            <button
+              onClick={() => setChatOpenId(chatOpenId === order.id ? null : order.id)}
+              className="rounded-lg bg-neutral-100 px-3 py-1.5 text-xs font-medium text-neutral-700"
+            >
+              💬 {chatOpenId === order.id ? 'Hide chat' : 'Chat'}
+            </button>
           </div>
+
+          {chatOpenId === order.id && <AdminChatPanel orderId={order.id} />}
 
           {cancellingId === order.id && (
             <div className="mt-3 flex gap-2">
