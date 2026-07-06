@@ -9,6 +9,7 @@ export const OWNER_TELEGRAM_ID = '8376671012'
 
 interface SendMessageOptions {
   reply_markup?: InlineKeyboardMarkup | { force_reply: true }
+  parse_mode?: 'Markdown' | 'MarkdownV2' | 'HTML'
 }
 
 /**
@@ -80,9 +81,14 @@ export function orderActionButtons(orderId: string): InlineKeyboardMarkup {
   }
 }
 
-export function driverActionButtons(orderId: string): InlineKeyboardMarkup {
+export function driverActionButtons(orderId: string, deliveryAddress?: string): InlineKeyboardMarkup {
+  const wazeRow = deliveryAddress
+    ? [{ text: '🗺️ Open in Waze', url: `https://waze.com/ul?q=${encodeURIComponent(deliveryAddress)}&navigate=yes` }]
+    : null
+
   return {
     inline_keyboard: [
+      ...(wazeRow ? [wazeRow] : []),
       [{ text: '🚗 On the way', callback_data: `on_the_way:${orderId}` }],
       [{ text: '📦 Delivered', callback_data: `delivered:${orderId}` }],
       [{ text: '❌ Cancel', callback_data: `cancel_order:${orderId}` }],

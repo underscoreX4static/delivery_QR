@@ -10,6 +10,8 @@ interface StoreSettings {
   freeDeliveryThreshold: number
   discountThreshold: number
   discountRate: number
+  discountThreshold2: number
+  discountRate2: number
   reorderDaysDefault: number
 }
 
@@ -89,7 +91,7 @@ export function SettingsBoard() {
               className="w-28 rounded border border-neutral-300 px-2 py-1 text-xs"
             />
           </Field>
-          <Field label="Discount threshold ($)">
+          <Field label="Tier 1 threshold ($)">
             <input
               type="number"
               step="0.01"
@@ -98,12 +100,30 @@ export function SettingsBoard() {
               className="w-28 rounded border border-neutral-300 px-2 py-1 text-xs"
             />
           </Field>
-          <Field label="Discount rate (%)">
+          <Field label="Tier 1 rate (%)">
             <input
               type="number"
               step="0.1"
               value={settings.discountRate * 100}
               onChange={(e) => update('discountRate', Number(e.target.value) / 100)}
+              className="w-24 rounded border border-neutral-300 px-2 py-1 text-xs"
+            />
+          </Field>
+          <Field label="Tier 2 threshold ($)">
+            <input
+              type="number"
+              step="0.01"
+              value={settings.discountThreshold2}
+              onChange={(e) => update('discountThreshold2', Number(e.target.value))}
+              className="w-28 rounded border border-neutral-300 px-2 py-1 text-xs"
+            />
+          </Field>
+          <Field label="Tier 2 rate (%)">
+            <input
+              type="number"
+              step="0.1"
+              value={settings.discountRate2 * 100}
+              onChange={(e) => update('discountRate2', Number(e.target.value) / 100)}
               className="w-24 rounded border border-neutral-300 px-2 py-1 text-xs"
             />
           </Field>

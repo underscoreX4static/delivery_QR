@@ -13,9 +13,11 @@ const DEFAULTS: StoreSettings = {
   closeTime: '24:00',
   isManuallyClosed: false,
   deliveryFee: 10,
-  freeDeliveryThreshold: 150,
-  discountThreshold: 250,
+  freeDeliveryThreshold: 100,
+  discountThreshold: 175,
   discountRate: 0.1,
+  discountThreshold2: 250,
+  discountRate2: 0.15,
   reorderDaysDefault: 7,
 }
 
@@ -33,6 +35,8 @@ export async function getSettings(): Promise<StoreSettings> {
     freeDeliveryThreshold: Number(map.free_delivery_threshold ?? DEFAULTS.freeDeliveryThreshold),
     discountThreshold: Number(map.discount_threshold ?? DEFAULTS.discountThreshold),
     discountRate: Number(map.discount_rate ?? DEFAULTS.discountRate),
+    discountThreshold2: Number(map.discount_threshold_2 ?? DEFAULTS.discountThreshold2),
+    discountRate2: Number(map.discount_rate_2 ?? DEFAULTS.discountRate2),
     reorderDaysDefault: Number(map.reorder_days_default ?? DEFAULTS.reorderDaysDefault),
   }
 }
@@ -40,8 +44,7 @@ export async function getSettings(): Promise<StoreSettings> {
 export async function updateSetting(key: string, value: string, updatedBy: string): Promise<void> {
   const { error } = await supabaseAdmin
     .from('settings')
-    .update({ value, updated_by: updatedBy, updated_at: new Date().toISOString() })
-    .eq('key', key)
+    .upsert({ key, value, updated_by: updatedBy, updated_at: new Date().toISOString() }, { onConflict: 'key' })
 
   if (error) throw new Error(`Failed to update setting ${key}: ${error.message}`)
 }

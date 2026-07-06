@@ -19,6 +19,7 @@ type Action =
   | 'confirm_order'
   | 'self_handle'
   | 'on_the_way'
+  | 'eta'
   | 'delivered'
   | 'cancel_order'
   | 'settle_confirm'
@@ -33,7 +34,7 @@ type OrderWithRelations = Order & {
 
 export async function handleCallbackQuery(query: CallbackQuery) {
   const data = query.data ?? ''
-  const [action, orderId] = data.split(':') as [Action, string]
+  const [action, orderId, extra] = data.split(':') as [Action, string, string | undefined]
   const fromTelegramId = String(query.from.id)
 
   if (!orderId) {
@@ -50,6 +51,9 @@ export async function handleCallbackQuery(query: CallbackQuery) {
       break
     case 'on_the_way':
       await onTheWay(query, orderId, fromTelegramId)
+      break
+    case 'eta':
+      await handleEta(query, orderId, extra ?? '', fromTelegramId)
       break
     case 'delivered':
       await delivered(query, orderId, fromTelegramId)
@@ -171,11 +175,12 @@ async function selfHandle(query: CallbackQuery, orderId: string, fromTelegramId:
 
   await assignDriver(orderId, ownerDriver.id)
   await answerCallbackQuery(query.id, 'You are now handling this order')
-  await sendMessage(fromTelegramId, `Manage order #${orderId.slice(0, 8)}:`, {
-    reply_markup: driverActionButtons(orderId),
-  })
 
   const order = await getOrderWithRelations(orderId)
+  await sendMessage(fromTelegramId, `Manage order #${orderId.slice(0, 8)}:`, {
+    reply_markup: driverActionButtons(orderId, order?.delivery_address),
+  })
+
   if (order?.users?.telegram_id) {
     await sendMessage(
       order.users.telegram_id,
@@ -198,9 +203,43 @@ async function onTheWay(query: CallbackQuery, orderId: string, fromTelegramId: s
   }
 
   await answerCallbackQuery(query.id, 'Marked on the way')
+
   if (order.users?.telegram_id) {
-    await sendMessage(order.users.telegram_id, `🚗 Your order #${orderId.slice(0, 8)} is on the way!`)
+    await sendMessage(
+      order.users.telegram_id,
+      `🚗 Your driver is on the way!\nThey'll confirm the ETA shortly.`
+    )
   }
+
+  await sendMessage(fromTelegramId, '⏱️ How many minutes until delivery?', {
+    reply_markup: {
+      inline_keyboard: [
+        [
+          { text: '10 min', callback_data: `eta:${orderId}:10` },
+          { text: '15 min', callback_data: `eta:${orderId}:15` },
+          { text: '20 min', callback_data: `eta:${orderId}:20` },
+          { text: '30 min', callback_data: `eta:${orderId}:30` },
+        ],
+      ],
+    },
+  })
+}
+
+async function handleEta(query: CallbackQuery, orderId: string, minutes: string, fromTelegramId: string) {
+  const order = await getOrderWithRelations(orderId)
+  if (!order || !isAuthorizedForOrder(order, fromTelegramId)) {
+    await answerCallbackQuery(query.id, 'Only the assigned driver or owner can do that.')
+    return
+  }
+
+  if (order.users?.telegram_id) {
+    await sendMessage(
+      order.users.telegram_id,
+      `🚗 Your driver is on the way!\n⏱️ Estimated arrival: ~${minutes} minutes\n💵 Please have $${order.total.toFixed(2)} cash ready!`
+    )
+  }
+
+  await answerCallbackQuery(query.id, `Customer notified — ETA ${minutes} min`)
 }
 
 async function delivered(query: CallbackQuery, orderId: string, fromTelegramId: string) {

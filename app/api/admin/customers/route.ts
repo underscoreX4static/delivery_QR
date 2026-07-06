@@ -3,9 +3,10 @@ import { requireAdmin } from '@/lib/admin-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import type { Order, User } from '@/types/index'
 
-export type LoyaltyTier = 'new' | 'regular' | 'vip'
+export type LoyaltyTier = 'new' | 'regular' | 'vip' | 'diamond'
 
 function loyaltyTier(orderCount: number): LoyaltyTier {
+  if (orderCount >= 11) return 'diamond'
   if (orderCount >= 6) return 'vip'
   if (orderCount >= 2) return 'regular'
   return 'new'

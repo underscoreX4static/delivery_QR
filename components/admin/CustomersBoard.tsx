@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Modal } from '@/components/admin/Modal'
 import type { LoyaltyTier } from '@/app/api/admin/customers/route'
 import type { Order, User } from '@/types/index'
@@ -15,13 +15,18 @@ interface AdminCustomer extends User {
 
 const LOYALTY_BADGE: Record<LoyaltyTier, string> = {
   new: '🆕 New',
-  regular: '⭐ Regular',
-  vip: '👑 VIP',
+  regular: '🔄 Regular',
+  vip: '⭐ VIP',
+  diamond: '💎 Diamond',
 }
+
+type SortKey = 'most_orders' | 'most_spent' | 'most_recent'
 
 export function CustomersBoard() {
   const [customers, setCustomers] = useState<AdminCustomer[]>([])
   const [selected, setSelected] = useState<AdminCustomer | null>(null)
+  const [search, setSearch] = useState('')
+  const [sortKey, setSortKey] = useState<SortKey>('most_spent')
 
   const load = () => fetch('/api/admin/customers').then((r) => r.json()).then((d) => setCustomers(d.customers ?? []))
 
@@ -29,9 +34,44 @@ export function CustomersBoard() {
     load()
   }, [])
 
+  const visibleCustomers = useMemo(() => {
+    const query = search.trim().toLowerCase()
+    let result = customers
+    if (query) {
+      result = result.filter((c) => {
+        const name = `${c.first_name ?? ''} ${c.last_name ?? ''}`.toLowerCase()
+        return name.includes(query) || (c.phone ?? '').toLowerCase().includes(query)
+      })
+    }
+
+    return [...result].sort((a, b) => {
+      if (sortKey === 'most_orders') return b.order_count - a.order_count
+      if (sortKey === 'most_recent') return (b.last_order_at ?? '').localeCompare(a.last_order_at ?? '')
+      return b.total_spent - a.total_spent
+    })
+  }, [customers, search, sortKey])
+
   return (
     <div className="flex flex-col gap-3">
-      {customers.map((customer) => (
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by name or phone…"
+          className="flex-1 rounded-lg border border-neutral-300 px-3 py-2 text-base sm:text-sm"
+        />
+        <select
+          value={sortKey}
+          onChange={(e) => setSortKey(e.target.value as SortKey)}
+          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+        >
+          <option value="most_spent">Most spent</option>
+          <option value="most_orders">Most orders</option>
+          <option value="most_recent">Most recent</option>
+        </select>
+      </div>
+
+      {visibleCustomers.map((customer) => (
         <button
           key={customer.id}
           onClick={() => setSelected(customer)}
@@ -51,7 +91,7 @@ export function CustomersBoard() {
           </div>
         </button>
       ))}
-      {customers.length === 0 && <p className="text-sm text-neutral-600">No customers yet.</p>}
+      {visibleCustomers.length === 0 && <p className="text-sm text-neutral-600">No customers match.</p>}
 
       {selected && <CustomerDetail customer={selected} onClose={() => setSelected(null)} />}
     </div>

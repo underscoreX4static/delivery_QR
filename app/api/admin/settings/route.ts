@@ -20,6 +20,8 @@ const FIELD_TO_KEY: Record<string, string> = {
   freeDeliveryThreshold: 'free_delivery_threshold',
   discountThreshold: 'discount_threshold',
   discountRate: 'discount_rate',
+  discountThreshold2: 'discount_threshold_2',
+  discountRate2: 'discount_rate_2',
   reorderDaysDefault: 'reorder_days_default',
 }
 

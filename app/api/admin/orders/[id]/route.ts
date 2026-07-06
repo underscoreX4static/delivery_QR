@@ -32,16 +32,15 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
       case 'assign_driver': {
         if (!body.driver_id) return NextResponse.json({ error: 'driver_id is required' }, { status: 400 })
         await assignDriver(orderId, body.driver_id)
-        const { data: driver } = await supabaseAdmin
-          .from('drivers')
-          .select('telegram_id')
-          .eq('id', body.driver_id)
-          .single()
+        const [{ data: driver }, order] = await Promise.all([
+          supabaseAdmin.from('drivers').select('telegram_id').eq('id', body.driver_id).single(),
+          getOrder(orderId),
+        ])
         if (driver?.telegram_id) {
           await sendMessage(
             driver.telegram_id,
             `🚗 You've been assigned order #${orderId.slice(0, 8)}.`,
-            { reply_markup: driverActionButtons(orderId) }
+            { reply_markup: driverActionButtons(orderId, order?.delivery_address) }
           )
         }
         break

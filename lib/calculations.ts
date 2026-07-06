@@ -10,26 +10,42 @@ const OWNER_PROFIT_SHARE = 0.62
 export interface PricingSettings {
   deliveryFee: number
   freeDeliveryThreshold: number
+  /** Lower discount tier — e.g. 10% off at $175 */
   discountThreshold: number
   discountRate: number
+  /** Upper discount tier — e.g. 15% off at $250. Falls back to tier 1 if unset. */
+  discountThreshold2: number
+  discountRate2: number
 }
 
 export interface OrderPricing {
   subtotal: number
   deliveryFee: number
   discount: number
+  /** The discount rate actually applied (0 if under the first threshold) — lets callers show which tier is active. */
+  discountRate: number
   total: number
 }
 
 /**
  * Computes delivery fee, discount and total for a given subtotal, driven
  * entirely by the `settings` table values passed in — never hardcoded.
+ * Two discount tiers stack upward: subtotal >= discountThreshold2 gets
+ * discountRate2, subtotal >= discountThreshold gets discountRate, else none.
  */
 export function calculateOrderPricing(subtotal: number, settings: PricingSettings): OrderPricing {
   const deliveryFee = subtotal >= settings.freeDeliveryThreshold ? 0 : settings.deliveryFee
-  const discount = subtotal >= settings.discountThreshold ? round2(subtotal * settings.discountRate) : 0
+
+  const discountRate =
+    subtotal >= settings.discountThreshold2
+      ? settings.discountRate2
+      : subtotal >= settings.discountThreshold
+        ? settings.discountRate
+        : 0
+
+  const discount = round2(subtotal * discountRate)
   const total = round2(subtotal + deliveryFee - discount)
-  return { subtotal: round2(subtotal), deliveryFee, discount, total }
+  return { subtotal: round2(subtotal), deliveryFee, discount, discountRate, total }
 }
 
 export interface PayoutInput {

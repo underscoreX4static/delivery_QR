@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import type { Partner } from '@/types/index'
 
 interface AdminPartner extends Partner {
@@ -22,6 +23,15 @@ export function PartnersBoard() {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ is_active: !partner.is_active }),
+    })
+    load()
+  }
+
+  const saveTelegramId = async (partnerId: string, telegramId: string) => {
+    await fetch(`/api/admin/partners/${partnerId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegram_id: telegramId || null }),
     })
     load()
   }
@@ -64,9 +74,18 @@ export function PartnersBoard() {
               <span>Commission: {(p.commission_rate * 100).toFixed(1)}%</span>
               <span>Owed: ${p.commission_owed.toFixed(2)}</span>
             </div>
-            <button onClick={() => toggleActive(p)} className="mt-2 w-full rounded-lg bg-neutral-100 py-2 text-xs font-medium text-neutral-700">
-              {p.is_active ? 'Deactivate' : 'Activate'}
-            </button>
+            <TelegramIdField initialValue={p.telegram_id ?? ''} onSave={(id) => saveTelegramId(p.id, id)} />
+            <div className="mt-2 flex gap-2">
+              <Link
+                href={`/admin/partners/${p.id}`}
+                className="flex-1 rounded-lg bg-neutral-900 py-2 text-center text-xs font-medium text-white"
+              >
+                View stats →
+              </Link>
+              <button onClick={() => toggleActive(p)} className="flex-1 rounded-lg bg-neutral-100 py-2 text-xs font-medium text-neutral-700">
+                {p.is_active ? 'Deactivate' : 'Activate'}
+              </button>
+            </div>
           </div>
         ))}
         {partners.length === 0 && <p className="text-sm text-neutral-600">No commercials yet.</p>}
@@ -79,6 +98,7 @@ export function PartnersBoard() {
             <tr>
               <th className="px-3 py-2">Name</th>
               <th className="px-3 py-2">Contact</th>
+              <th className="px-3 py-2">Telegram ID</th>
               <th className="px-3 py-2">Commission</th>
               <th className="px-3 py-2">Owed</th>
               <th className="px-3 py-2">Active</th>
@@ -95,10 +115,16 @@ export function PartnersBoard() {
                 <td className="px-3 py-2 text-xs">
                   {p.contact_name} {p.contact_phone ? `· ${p.contact_phone}` : ''}
                 </td>
+                <td className="px-3 py-2">
+                  <TelegramIdField initialValue={p.telegram_id ?? ''} onSave={(id) => saveTelegramId(p.id, id)} />
+                </td>
                 <td className="px-3 py-2">{(p.commission_rate * 100).toFixed(1)}%</td>
                 <td className="px-3 py-2">${p.commission_owed.toFixed(2)}</td>
                 <td className="px-3 py-2">{p.is_active ? 'Yes' : 'No'}</td>
                 <td className="px-3 py-2">
+                  <Link href={`/admin/partners/${p.id}`} className="mr-3 text-xs text-blue-600">
+                    View stats →
+                  </Link>
                   <button onClick={() => toggleActive(p)} className="text-xs text-blue-600">
                     {p.is_active ? 'Deactivate' : 'Activate'}
                   </button>
@@ -107,7 +133,7 @@ export function PartnersBoard() {
             ))}
             {partners.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-3 py-4 text-center text-neutral-600">
+                <td colSpan={7} className="px-3 py-4 text-center text-neutral-600">
                   No commercials yet.
                 </td>
               </tr>
@@ -116,6 +142,23 @@ export function PartnersBoard() {
         </table>
       </div>
     </div>
+  )
+}
+
+function TelegramIdField({ initialValue, onSave }: { initialValue: string; onSave: (value: string) => void }) {
+  const [value, setValue] = useState(initialValue)
+
+  return (
+    <input
+      value={value}
+      onChange={(e) => setValue(e.target.value)}
+      onBlur={() => {
+        if (value !== initialValue) onSave(value.trim())
+      }}
+      placeholder="Telegram ID"
+      title="Ask the commercial to send /start to the bot and share their Telegram ID with you."
+      className="w-28 rounded border border-neutral-300 px-2 py-1 text-xs"
+    />
   )
 }
 

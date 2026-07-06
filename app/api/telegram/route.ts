@@ -58,6 +58,8 @@ async function handleCommand(message: Message) {
     await handleStart(message, payload)
   } else if (command === '/orders') {
     await handleDriverOrders(message)
+  } else if (command === '/mystats') {
+    await handleMyStats(message)
   }
 }
 
@@ -153,4 +155,67 @@ async function handleDriverOrders(message: Message) {
     (o) => `#${o.id.slice(0, 8)} — $${o.total} — ${o.delivery_address}`
   )
   await sendMessage(chatId, `Unassigned confirmed orders:\n\n${lines.join('\n')}`)
+}
+
+/** Self-serve referral stats for commercials — matched by partners.telegram_id. */
+async function handleMyStats(message: Message) {
+  const chatId = message.chat.id
+  const telegramId = String(message.from!.id)
+
+  const { data: partner } = await supabaseAdmin
+    .from('partners')
+    .select('id, name, commission_rate')
+    .eq('telegram_id', telegramId)
+    .maybeSingle()
+
+  if (!partner) {
+    await sendMessage(chatId, "❌ You're not registered as a commercial. Contact HAZE to get set up.")
+    return
+  }
+
+  const { data: qrCodes } = await supabaseAdmin.from('qr_codes').select('id').eq('partner_id', partner.id)
+  const qrIds = (qrCodes ?? []).map((q) => q.id)
+
+  const [{ count: totalScans }, { data: uniqueScanUsers }, { data: orders }, { data: commissions }] =
+    await Promise.all([
+      qrIds.length
+        ? supabaseAdmin.from('qr_scans').select('*', { count: 'exact', head: true }).in('qr_code_id', qrIds)
+        : Promise.resolve({ count: 0 }),
+      qrIds.length
+        ? supabaseAdmin.from('qr_scans').select('user_id').in('qr_code_id', qrIds).not('user_id', 'is', null)
+        : Promise.resolve({ data: [] as { user_id: string }[] }),
+      qrIds.length
+        ? supabaseAdmin.from('orders').select('total').in('qr_code_id', qrIds).eq('status', 'delivered')
+        : Promise.resolve({ data: [] as { total: number }[] }),
+      supabaseAdmin.from('affiliate_commissions').select('commission_amount, paid_out').eq('partner_id', partner.id),
+    ])
+
+  const uniqueUserCount = new Set((uniqueScanUsers ?? []).map((u) => u.user_id)).size
+  const totalOrders = orders?.length ?? 0
+  const totalRevenue = (orders ?? []).reduce((sum, o) => sum + Number(o.total), 0)
+
+  const totalEarned = (commissions ?? []).reduce((sum, c) => sum + Number(c.commission_amount), 0)
+  const totalPaid = (commissions ?? [])
+    .filter((c) => c.paid_out)
+    .reduce((sum, c) => sum + Number(c.commission_amount), 0)
+  const pending = totalEarned - totalPaid
+
+  const msg = `
+📊 *Your stats — HAZE Delivery*
+
+👋 Hey ${partner.name}!
+
+🔗 *Scans:* ${totalScans ?? 0} total, ${uniqueUserCount} unique users
+🛒 *Orders generated:* ${totalOrders}
+💰 *Revenue brought:* $${totalRevenue.toFixed(2)}
+📈 *Your commission rate:* ${(partner.commission_rate * 100).toFixed(1)}%
+
+💵 *Total earned:* $${totalEarned.toFixed(2)}
+✅ *Paid out:* $${totalPaid.toFixed(2)}
+⏳ *Pending:* $${pending.toFixed(2)}
+
+Keep spreading! 🔥
+  `.trim()
+
+  await sendMessage(chatId, msg, { parse_mode: 'Markdown' })
 }

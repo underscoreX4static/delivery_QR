@@ -24,6 +24,8 @@ export interface Partner {
   commission_rate: number
   is_active: boolean
   created_at: string
+  /** Requires migration: alter table partners add column if not exists telegram_id text; */
+  telegram_id?: string | null
 }
 
 export interface QrCode {
@@ -222,6 +224,7 @@ export interface CartPreview {
   subtotal: number
   delivery_fee: number
   discount: number
+  discount_rate: number
   total: number
 }
 

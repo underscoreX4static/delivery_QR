@@ -16,5 +16,7 @@ export async function GET(request: NextRequest) {
     free_delivery_threshold: settings.freeDeliveryThreshold,
     discount_threshold: settings.discountThreshold,
     discount_rate: settings.discountRate,
+    discount_threshold_2: settings.discountThreshold2,
+    discount_rate_2: settings.discountRate2,
   })
 }

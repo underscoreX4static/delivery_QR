@@ -26,6 +26,7 @@ export async function POST(request: NextRequest) {
       subtotal: pricing.subtotal,
       delivery_fee: pricing.deliveryFee,
       discount: pricing.discount,
+      discount_rate: pricing.discountRate,
       total: pricing.total,
     }
 
