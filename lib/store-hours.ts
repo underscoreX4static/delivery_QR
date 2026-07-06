@@ -87,3 +87,16 @@ export function formatBrisbaneTime(utcDate: Date | string, fmt = 'd MMM yyyy, h:
   const date = typeof utcDate === 'string' ? new Date(utcDate) : utcDate
   return format(toBrisbaneWallClock(date), fmt)
 }
+
+/** UTC instant bounds of "today" in Brisbane wall-clock time — used for daily driver settlements. */
+export function getBrisbaneDayBounds(now: Date = new Date()): { start: Date; end: Date } {
+  const wallClockNow = toBrisbaneWallClock(now)
+  const dayStart = startOfBrisbaneDay(wallClockNow)
+  const dayEnd = addMinutes(dayStart, 24 * 60)
+  return { start: fromBrisbaneWallClock(dayStart), end: fromBrisbaneWallClock(dayEnd) }
+}
+
+/** YYYY-MM-DD date string for "today" in Brisbane, for settlements.period_start/end columns. */
+export function getBrisbaneDateString(now: Date = new Date()): string {
+  return format(toBrisbaneWallClock(now), 'yyyy-MM-dd')
+}

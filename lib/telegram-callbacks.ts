@@ -8,9 +8,23 @@ import {
   confirmOrder as confirmOrderTransition,
   markDelivered,
 } from '@/lib/orders'
+import {
+  confirmDriverSettlement,
+  confirmSettlementReceived,
+  disputeSettlement,
+} from '@/lib/settlements'
 import type { Order } from '@/types/index'
 
-type Action = 'confirm_order' | 'self_handle' | 'on_the_way' | 'delivered' | 'cancel_order'
+type Action =
+  | 'confirm_order'
+  | 'self_handle'
+  | 'on_the_way'
+  | 'delivered'
+  | 'cancel_order'
+  | 'settle_confirm'
+  | 'settle_deny'
+  | 'settle_received'
+  | 'settle_received_deny'
 
 type OrderWithRelations = Order & {
   users: { telegram_id: string } | null
@@ -42,6 +56,18 @@ export async function handleCallbackQuery(query: CallbackQuery) {
       break
     case 'cancel_order':
       await startCancelFlow(query, orderId, fromTelegramId)
+      break
+    case 'settle_confirm':
+      await settleConfirm(query, orderId)
+      break
+    case 'settle_deny':
+      await settleDeny(query, orderId)
+      break
+    case 'settle_received':
+      await settleReceived(query, orderId)
+      break
+    case 'settle_received_deny':
+      await settleReceivedDeny(query, orderId)
       break
     default:
       await answerCallbackQuery(query.id)
@@ -215,4 +241,36 @@ async function startCancelFlow(query: CallbackQuery, orderId: string, fromTelegr
   await sendMessage(fromTelegramId, `Please reply with the cancellation reason for order ${orderId}.`, {
     reply_markup: { force_reply: true },
   })
+}
+
+async function settleConfirm(query: CallbackQuery, settlementId: string) {
+  const result = await confirmDriverSettlement(settlementId)
+  if (!result.ok) {
+    await answerCallbackQuery(query.id, `Could not confirm: ${result.error}`)
+    return
+  }
+  await answerCallbackQuery(query.id, 'Settlement confirmed')
+  await sendMessage(String(query.from.id), '✅ Settlement confirmed. The owner will hand over your cash share.')
+}
+
+async function settleDeny(query: CallbackQuery, settlementId: string) {
+  await disputeSettlement(settlementId, 'confirm')
+  await answerCallbackQuery(query.id, 'Owner notified')
+  await sendMessage(String(query.from.id), 'The owner has been notified to resolve this settlement with you.')
+}
+
+async function settleReceived(query: CallbackQuery, settlementId: string) {
+  const result = await confirmSettlementReceived(settlementId)
+  if (!result.ok) {
+    await answerCallbackQuery(query.id, `Could not confirm: ${result.error}`)
+    return
+  }
+  await answerCallbackQuery(query.id, 'Thanks!')
+  await sendMessage(String(query.from.id), '✅ Payment receipt confirmed — settlement locked.')
+}
+
+async function settleReceivedDeny(query: CallbackQuery, settlementId: string) {
+  await disputeSettlement(settlementId, 'received')
+  await answerCallbackQuery(query.id, 'Owner notified')
+  await sendMessage(String(query.from.id), 'The owner has been notified to resolve this payment with you.')
 }
