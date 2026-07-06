@@ -1,6 +1,7 @@
 import { supabaseAdmin } from '@/lib/supabase'
 import { getSettings } from '@/lib/settings'
 import { notifyOwner } from '@/lib/telegram'
+import { getAppUrl } from '@/lib/env'
 import type { Product, VelocityTier } from '@/types/index'
 
 const WINDOW_DAYS = 30
@@ -124,7 +125,7 @@ async function maybeSendRestockAlert(
     if (Date.now() - lastSent < 24 * 60 * 60 * 1000) return false
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL!
+  const appUrl = getAppUrl()
   await notifyOwner(
     `⚠️ Restock alert — ${product.name}\n` +
       `Stock: ${product.stock_qty} units (~${daysRemaining.toFixed(1)} days remaining)\n` +

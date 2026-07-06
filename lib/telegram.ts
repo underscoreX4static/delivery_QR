@@ -1,5 +1,6 @@
 import crypto from 'crypto'
 import TelegramBot, { InlineKeyboardMarkup } from 'node-telegram-bot-api'
+import { getAppUrl } from '@/lib/env'
 
 type SendMessageOptions = NonNullable<Parameters<InstanceType<typeof TelegramBot>['sendMessage']>[2]>
 
@@ -41,7 +42,7 @@ export async function notifyOwner(text: string, replyMarkup?: InlineKeyboardMark
 
 /** Sends the "Open HAZE Delivery" Mini App launch button to a customer chat. */
 export async function sendOrderButton(chatId: string | number, qrSlug?: string) {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL!
+  const appUrl = getAppUrl()
   const url = qrSlug ? `${appUrl}/order?qr=${encodeURIComponent(qrSlug)}` : `${appUrl}/order`
 
   return sendMessage(chatId, 'Welcome to HAZE Delivery 🛵\nTap below to browse the catalogue.', {
