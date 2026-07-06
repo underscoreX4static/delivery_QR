@@ -1,28 +1,43 @@
 import crypto from 'crypto'
-import TelegramBot, { InlineKeyboardMarkup } from 'node-telegram-bot-api'
+import type { InlineKeyboardMarkup } from 'node-telegram-bot-api'
 import { getAppUrl } from '@/lib/env'
 
-type SendMessageOptions = NonNullable<Parameters<InstanceType<typeof TelegramBot>['sendMessage']>[2]>
-
 const token = process.env.TELEGRAM_BOT_TOKEN!
-
-// polling/webHook both false — this instance is only ever used to call the
-// HTTP API directly (sendMessage, answerCallbackQuery, ...). The actual
-// webhook is handled by app/api/telegram/route.ts.
-export const bot = new TelegramBot(token, { polling: false })
+const API_BASE = `https://api.telegram.org/bot${token}`
 
 export const OWNER_TELEGRAM_ID = '8376671012'
 
-export async function sendMessage(
-  chatId: string | number,
-  text: string,
-  options?: SendMessageOptions
-) {
-  return bot.sendMessage(chatId, text, options)
+interface SendMessageOptions {
+  reply_markup?: InlineKeyboardMarkup | { force_reply: true }
+}
+
+/**
+ * Thin fetch wrapper around the Telegram Bot HTTP API. Deliberately avoids
+ * the node-telegram-bot-api client library — it shells out to the long-
+ * deprecated `request` package, which fails silently in some serverless
+ * Node runtimes (confirmed in production: sendMessage calls never reached
+ * Telegram even though the surrounding handler completed without error).
+ */
+async function telegramRequest<T>(method: string, params: Record<string, unknown>): Promise<T> {
+  const res = await fetch(`${API_BASE}/${method}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  })
+
+  const data = await res.json()
+  if (!res.ok || !data.ok) {
+    throw new Error(`Telegram API ${method} failed: ${data.description ?? res.statusText}`)
+  }
+  return data.result as T
+}
+
+export async function sendMessage(chatId: string | number, text: string, options?: SendMessageOptions) {
+  return telegramRequest('sendMessage', { chat_id: chatId, text, ...options })
 }
 
 export async function answerCallbackQuery(callbackQueryId: string, text?: string) {
-  return bot.answerCallbackQuery(callbackQueryId, text ? { text } : undefined)
+  return telegramRequest('answerCallbackQuery', { callback_query_id: callbackQueryId, text })
 }
 
 export async function editMessageReplyMarkup(
@@ -30,9 +45,10 @@ export async function editMessageReplyMarkup(
   messageId: number,
   replyMarkup?: InlineKeyboardMarkup
 ) {
-  return bot.editMessageReplyMarkup(replyMarkup ?? { inline_keyboard: [] }, {
+  return telegramRequest('editMessageReplyMarkup', {
     chat_id: chatId,
     message_id: messageId,
+    reply_markup: replyMarkup ?? { inline_keyboard: [] },
   })
 }
 
