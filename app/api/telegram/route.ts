@@ -22,10 +22,29 @@ export async function POST(request: NextRequest) {
     }
   } catch (err) {
     console.error('telegram webhook error', err)
+    await reportErrorToOwner(err)
   }
 
   // Always return 200 immediately so Telegram doesn't retry the update.
   return NextResponse.json({ ok: true })
+}
+
+/**
+ * Temporary direct-fetch error reporter for production diagnostics — bypasses
+ * lib/telegram.ts entirely so a bug there can't also swallow this message.
+ */
+async function reportErrorToOwner(err: unknown) {
+  try {
+    const token = process.env.TELEGRAM_BOT_TOKEN!
+    const text = `⚠️ Webhook error:\n${err instanceof Error ? `${err.message}\n${err.stack?.slice(0, 500)}` : String(err)}`
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: '8376671012', text }),
+    })
+  } catch {
+    // last resort — nothing more we can do here
+  }
 }
 
 async function handleCommand(message: Message) {
