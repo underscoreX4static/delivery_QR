@@ -51,7 +51,7 @@ export function ProductsBoard() {
 
       <div className="flex flex-col gap-2">
         {products.map((product) => (
-          <div key={product.id} className="rounded-xl border border-neutral-200 bg-white p-4">
+          <div key={product.id} id={`product-${product.id}`} className="rounded-xl border border-neutral-200 bg-white p-4 scroll-mt-4">
             <div className="flex items-start justify-between gap-2">
               <div>
                 <p className="text-sm font-semibold">{product.name}</p>
