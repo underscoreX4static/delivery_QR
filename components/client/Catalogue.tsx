@@ -15,15 +15,20 @@ export function Catalogue({
   categories,
   cart,
   onOpenCart,
+  onViewOrders,
 }: {
   categories: CatalogueCategory[]
   cart: ReturnType<typeof useCart>
   onOpenCart: () => void
+  onViewOrders: () => void
 }) {
   return (
     <div className="pb-24">
-      <header className="sticky top-0 z-10 bg-neutral-50/95 px-4 py-4 backdrop-blur">
+      <header className="sticky top-0 z-10 flex items-center justify-between bg-neutral-50/95 px-4 py-4 backdrop-blur">
         <h1 className="text-lg font-semibold">HAZE Delivery</h1>
+        <button onClick={onViewOrders} className="text-sm font-medium text-neutral-600">
+          My orders
+        </button>
       </header>
 
       <div className="flex flex-col gap-6 px-4">

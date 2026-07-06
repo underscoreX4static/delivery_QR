@@ -8,9 +8,10 @@ import { Catalogue, type CatalogueCategory } from '@/components/client/Catalogue
 import { CartSheet } from '@/components/client/CartSheet'
 import { Checkout } from '@/components/client/Checkout'
 import { OrderConfirmation } from '@/components/client/OrderConfirmation'
+import { OrderHistory } from '@/components/client/OrderHistory'
 import type { User } from '@/types/index'
 
-type View = 'loading' | 'onboarding' | 'catalogue' | 'cart' | 'checkout' | 'confirmation' | 'error'
+type View = 'loading' | 'onboarding' | 'catalogue' | 'cart' | 'checkout' | 'confirmation' | 'orders' | 'error'
 
 export function OrderApp({ qrSlugFromUrl }: { qrSlugFromUrl: string | null }) {
   const { ready, initData, apiFetch } = useTelegram()
@@ -119,11 +120,16 @@ export function OrderApp({ qrSlugFromUrl }: { qrSlugFromUrl: string | null }) {
     )
   }
 
+  if (view === 'orders') {
+    return <OrderHistory onBack={() => setView('catalogue')} />
+  }
+
   return (
     <Catalogue
       categories={categories}
       cart={cart}
       onOpenCart={() => setView('cart')}
+      onViewOrders={() => setView('orders')}
     />
   )
 }
