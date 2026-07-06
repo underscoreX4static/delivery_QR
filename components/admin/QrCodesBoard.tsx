@@ -94,8 +94,8 @@ export function QrCodesBoard() {
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
                 <p className="text-sm font-semibold">{qr.partners?.name ?? 'Unknown partner'}</p>
-                <p className="text-xs text-neutral-500">{qr.label ?? qr.slug}</p>
-                <p className="text-xs text-neutral-400">https://t.me/{botUsername}?start=qr_{qr.slug}</p>
+                <p className="text-xs text-neutral-600">{qr.label ?? qr.slug}</p>
+                <p className="text-xs text-neutral-600">https://t.me/{botUsername}?start=qr_{qr.slug}</p>
               </div>
               <div className="flex items-center gap-2">
                 <a
@@ -109,7 +109,7 @@ export function QrCodesBoard() {
                 </button>
               </div>
             </div>
-            <div className="mt-2 flex gap-4 text-xs text-neutral-500">
+            <div className="mt-2 flex gap-4 text-xs text-neutral-600">
               <span>{qr.total_scans} scans</span>
               <span>{qr.unique_users} unique users</span>
               <span>{qr.orders_generated} orders</span>
@@ -117,7 +117,7 @@ export function QrCodesBoard() {
             </div>
           </div>
         ))}
-        {qrCodes.length === 0 && <p className="text-sm text-neutral-500">No QR codes yet.</p>}
+        {qrCodes.length === 0 && <p className="text-sm text-neutral-600">No QR codes yet.</p>}
       </div>
     </div>
   )

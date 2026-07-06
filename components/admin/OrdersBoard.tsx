@@ -73,7 +73,7 @@ export function OrdersBoard() {
 
   return (
     <div className="flex flex-col gap-3">
-      {orders.length === 0 && <p className="text-sm text-neutral-500">No orders yet.</p>}
+      {orders.length === 0 && <p className="text-sm text-neutral-600">No orders yet.</p>}
 
       {orders.map((order) => (
         <div key={order.id} className="rounded-xl border border-neutral-200 bg-white p-4">
@@ -82,7 +82,7 @@ export function OrdersBoard() {
               <p className="text-sm font-semibold">
                 #{order.id.slice(0, 8)} · {order.users?.first_name ?? 'Unknown'} {order.users?.last_name ?? ''}
               </p>
-              <p className="text-xs text-neutral-500">{order.users?.phone ?? 'No phone'}</p>
+              <p className="text-xs text-neutral-600">{order.users?.phone ?? 'No phone'}</p>
               <a
                 href={`https://waze.com/ul?q=${encodeURIComponent(order.delivery_address)}&navigate=yes`}
                 target="_blank"
@@ -97,7 +97,7 @@ export function OrdersBoard() {
             </span>
           </div>
 
-          <div className="mt-2 text-xs text-neutral-500">
+          <div className="mt-2 text-xs text-neutral-600">
             {order.order_items.length} item{order.order_items.length !== 1 ? 's' : ''} · $
             {order.total.toFixed(2)} · {order.scheduled_at ? `Scheduled ${new Date(order.scheduled_at).toLocaleString()}` : 'ASAP'}
           </div>

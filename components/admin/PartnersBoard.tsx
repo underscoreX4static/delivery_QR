@@ -45,7 +45,7 @@ export function PartnersBoard() {
 
       <div className="overflow-x-auto rounded-xl border border-neutral-200 bg-white">
         <table className="w-full text-left text-sm">
-          <thead className="bg-neutral-50 text-xs text-neutral-500">
+          <thead className="bg-neutral-50 text-xs text-neutral-600">
             <tr>
               <th className="px-3 py-2">Name</th>
               <th className="px-3 py-2">Contact</th>
@@ -60,7 +60,7 @@ export function PartnersBoard() {
               <tr key={p.id} className="border-t border-neutral-100">
                 <td className="px-3 py-2">
                   <p className="font-medium">{p.name}</p>
-                  <p className="text-xs text-neutral-500">{p.address}</p>
+                  <p className="text-xs text-neutral-600">{p.address}</p>
                 </td>
                 <td className="px-3 py-2 text-xs">
                   {p.contact_name} {p.contact_phone ? `· ${p.contact_phone}` : ''}
@@ -77,7 +77,7 @@ export function PartnersBoard() {
             ))}
             {partners.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-3 py-4 text-center text-neutral-400">
+                <td colSpan={6} className="px-3 py-4 text-center text-neutral-600">
                   No partners yet.
                 </td>
               </tr>

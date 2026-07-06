@@ -86,7 +86,7 @@ export function Checkout({
   return (
     <div className="flex min-h-dvh flex-col p-4">
       <div className="mb-4 flex items-center gap-3">
-        <button onClick={step === 'address' ? onBack : () => goBack(step, setStep)} className="text-sm text-neutral-500">
+        <button onClick={step === 'address' ? onBack : () => goBack(step, setStep)} className="text-sm text-neutral-600">
           ← Back
         </button>
         <h1 className="text-lg font-semibold">Checkout</h1>
@@ -116,7 +116,7 @@ export function Checkout({
       {step === 'time' && (
         <div className="flex flex-1 flex-col gap-4">
           {!storeStatus ? (
-            <p className="text-sm text-neutral-500">Loading store hours…</p>
+            <p className="text-sm text-neutral-600">Loading store hours…</p>
           ) : (
             <>
               {storeStatus.is_open ? (
@@ -162,7 +162,7 @@ export function Checkout({
       {step === 'review' && (
         <div className="flex flex-1 flex-col gap-4">
           {!preview ? (
-            <p className="text-sm text-neutral-500">Confirming prices…</p>
+            <p className="text-sm text-neutral-600">Confirming prices…</p>
           ) : (
             <>
               {preview.plan.split_batch_products.length > 0 && (
@@ -218,7 +218,7 @@ export function Checkout({
 function Row({ label, value }: { label: string; value: number }) {
   return (
     <div className="flex justify-between">
-      <span className="text-neutral-500">{label}</span>
+      <span className="text-neutral-600">{label}</span>
       <span>${value.toFixed(2)}</span>
     </div>
   )

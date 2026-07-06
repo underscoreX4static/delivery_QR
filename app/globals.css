@@ -1,8 +1,16 @@
 @import "tailwindcss";
 
+/*
+ * This app (admin dashboard + Telegram Mini App) is only built and tested
+ * against a light theme — no component has dark: variants. Telegram clients
+ * and phone OSes are commonly in dark mode, which used to flip these CSS
+ * vars via prefers-color-scheme and made gray-on-dark text unreadable.
+ * Pinned to light so rendering is consistent regardless of viewer theme.
+ */
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  color-scheme: light;
 }
 
 @theme inline {
@@ -10,13 +18,6 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {

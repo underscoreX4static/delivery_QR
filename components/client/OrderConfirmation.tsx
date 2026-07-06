@@ -31,7 +31,7 @@ export function OrderConfirmation({ orderId, onDone }: { orderId: string; onDone
       <p className="text-sm text-neutral-600">
         Order #{orderId.slice(0, 8)} — status: <strong>{order?.status ?? 'pending'}</strong>
       </p>
-      <p className="text-sm text-neutral-500">
+      <p className="text-sm text-neutral-600">
         We&apos;ll notify you here as your order is confirmed and on its way.
       </p>
       <button onClick={onDone} className="mt-4 rounded-xl bg-black px-6 py-3 font-medium text-white">

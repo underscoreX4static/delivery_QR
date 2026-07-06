@@ -57,7 +57,7 @@ export function BatchManager({ productId, targetMargin }: { productId: string; t
     <div className="mt-3 rounded-lg bg-neutral-50 p-3">
       <table className="w-full text-left text-xs">
         <thead>
-          <tr className="text-neutral-500">
+          <tr className="text-neutral-600">
             <th className="py-1">Received</th>
             <th>Supplier</th>
             <th>Remaining</th>
@@ -81,7 +81,7 @@ export function BatchManager({ productId, targetMargin }: { productId: string; t
           ))}
           {batches.length === 0 && (
             <tr>
-              <td colSpan={6} className="py-2 text-neutral-400">
+              <td colSpan={6} className="py-2 text-neutral-600">
                 No batches yet.
               </td>
             </tr>
@@ -134,7 +134,7 @@ export function BatchManager({ productId, targetMargin }: { productId: string; t
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <label className="flex flex-col gap-1 text-[10px] font-medium uppercase text-neutral-500">
+    <label className="flex flex-col gap-1 text-[10px] font-medium uppercase text-neutral-600">
       {label}
       {children}
     </label>

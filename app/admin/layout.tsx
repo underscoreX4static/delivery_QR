@@ -17,7 +17,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <AdminNav />
         </div>
         <div className="flex items-center justify-between px-3 py-2">
-          <span className="truncate text-xs text-neutral-400">{user.email}</span>
+          <span className="truncate text-xs text-neutral-600">{user.email}</span>
           <SignOutButton />
         </div>
       </aside>

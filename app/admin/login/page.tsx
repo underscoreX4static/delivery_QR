@@ -37,7 +37,7 @@ export default function AdminLoginPage() {
       >
         <div>
           <h1 className="text-lg font-semibold">HAZE Admin</h1>
-          <p className="text-sm text-neutral-500">Sign in to manage the store.</p>
+          <p className="text-sm text-neutral-600">Sign in to manage the store.</p>
         </div>
         <label className="flex flex-col gap-1 text-sm font-medium">
           Email

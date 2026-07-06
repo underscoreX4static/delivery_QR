@@ -55,7 +55,7 @@ export function ProductsBoard() {
             <div className="flex items-start justify-between gap-2">
               <div>
                 <p className="text-sm font-semibold">{product.name}</p>
-                <p className="text-xs text-neutral-500">
+                <p className="text-xs text-neutral-600">
                   {product.categories?.name ?? 'Uncategorized'}
                   {product.brand ? ` · ${product.brand}` : ''}
                 </p>
@@ -64,7 +64,7 @@ export function ProductsBoard() {
                 <p className="font-medium">
                   {product.current_price !== null ? `$${product.current_price.toFixed(2)}` : 'No stock'}
                 </p>
-                <p className="text-neutral-500">{product.stock_qty} in stock</p>
+                <p className="text-neutral-600">{product.stock_qty} in stock</p>
               </div>
             </div>
             <button
@@ -78,7 +78,7 @@ export function ProductsBoard() {
             )}
           </div>
         ))}
-        {products.length === 0 && <p className="text-sm text-neutral-500">No products yet.</p>}
+        {products.length === 0 && <p className="text-sm text-neutral-600">No products yet.</p>}
       </div>
     </div>
   )

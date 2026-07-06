@@ -28,11 +28,11 @@ export function Catalogue({
 
       <div className="flex flex-col gap-6 px-4">
         {categories.length === 0 && (
-          <p className="py-12 text-center text-sm text-neutral-500">No products available right now.</p>
+          <p className="py-12 text-center text-sm text-neutral-600">No products available right now.</p>
         )}
         {categories.map((category) => (
           <section key={category.id}>
-            <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-neutral-500">
+            <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-neutral-600">
               {category.name}
             </h2>
             <div className="grid grid-cols-2 gap-3">
@@ -49,7 +49,7 @@ export function Catalogue({
                       />
                     )}
                     <p className="text-sm font-medium leading-tight">{product.name}</p>
-                    {product.brand && <p className="text-xs text-neutral-500">{product.brand}</p>}
+                    {product.brand && <p className="text-xs text-neutral-600">{product.brand}</p>}
                     <p className="mt-1 text-sm font-semibold">${product.current_price.toFixed(2)}</p>
 
                     {qty === 0 ? (
