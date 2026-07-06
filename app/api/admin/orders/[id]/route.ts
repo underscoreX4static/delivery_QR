@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { advanceStatus, assignDriver, cancelOrder, confirmOrder, getOrder, markDelivered } from '@/lib/orders'
-import { sendMessage } from '@/lib/telegram'
+import { driverActionButtons, sendMessage } from '@/lib/telegram'
 
 type ActionBody =
   | { action: 'confirm' }
@@ -38,7 +38,11 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
           .eq('id', body.driver_id)
           .single()
         if (driver?.telegram_id) {
-          await sendMessage(driver.telegram_id, `🚗 You've been assigned order #${orderId.slice(0, 8)}.`)
+          await sendMessage(
+            driver.telegram_id,
+            `🚗 You've been assigned order #${orderId.slice(0, 8)}.`,
+            { reply_markup: driverActionButtons(orderId) }
+          )
         }
         break
       }
