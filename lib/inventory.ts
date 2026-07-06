@@ -76,26 +76,20 @@ export async function planConsumption(items: CartLineItem[]): Promise<Consumptio
 }
 
 /**
- * Recomputes the FIFO plan fresh (to avoid acting on stale reads) and
- * atomically decrements each batch's quantity_remaining. Throws if stock is
- * insufficient or if a concurrent write raced us — callers should surface
- * the error to the user and let them retry.
+ * Batch assignment happens once, at order creation (via planConsumption),
+ * and is stored on order_items.batch_id — it never gets re-planned. This
+ * commits that already-decided consumption by decrementing exactly those
+ * batch/quantity pairs, called when the owner confirms the order. Throws if
+ * a concurrent write raced us (e.g. another order drained the batch first)
+ * — callers should surface the error and let staff resolve it manually.
  */
-export async function commitConsumption(items: CartLineItem[]): Promise<ConsumptionPlan> {
-  const plan = await planConsumption(items)
-
-  if (plan.insufficient_stock.length > 0) {
-    throw new Error(
-      `Insufficient stock for: ${plan.insufficient_stock
-        .map((s) => `${s.product_id} (wanted ${s.requested}, have ${s.available})`)
-        .join(', ')}`
-    )
-  }
-
-  const committed: BatchConsumption[] = []
+export async function commitConsumption(
+  items: { batch_id: string; quantity: number }[]
+): Promise<void> {
+  const committed: { batch_id: string; quantity: number }[] = []
 
   try {
-    for (const line of plan.items) {
+    for (const line of items) {
       const { data: batch, error: readError } = await supabaseAdmin
         .from('product_batches')
         .select('quantity_remaining')
@@ -128,8 +122,6 @@ export async function commitConsumption(items: CartLineItem[]): Promise<Consumpt
     }
     throw err
   }
-
-  return plan
 }
 
 /**

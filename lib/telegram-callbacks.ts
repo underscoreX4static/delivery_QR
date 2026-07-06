@@ -1,7 +1,24 @@
 import type { CallbackQuery, Message } from 'node-telegram-bot-api'
 import { supabaseAdmin } from '@/lib/supabase'
 import { answerCallbackQuery, OWNER_TELEGRAM_ID, sendMessage } from '@/lib/telegram'
+import { commitConsumption } from '@/lib/inventory'
 import type { Order, OrderStatus } from '@/types/index'
+
+async function commitOrderStock(orderId: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { data: items, error } = await supabaseAdmin
+    .from('order_items')
+    .select('batch_id, quantity')
+    .eq('order_id', orderId)
+
+  if (error || !items) return { ok: false, error: 'Could not load order items.' }
+
+  try {
+    await commitConsumption(items)
+    return { ok: true }
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : 'Stock commit failed.' }
+  }
+}
 
 type Action = 'confirm_order' | 'self_handle' | 'on_the_way' | 'delivered' | 'cancel_order'
 
@@ -34,6 +51,7 @@ export async function handleCallbackQuery(query: CallbackQuery) {
 }
 
 /** Placeholder — cancellation reason capture is wired up in Step 9. */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function handleReplyMessage(_message: Message) {
   return
 }
@@ -67,6 +85,12 @@ async function getOrderWithCustomer(orderId: string) {
 async function confirmOrder(query: CallbackQuery, orderId: string, fromTelegramId: string) {
   if (!(await requireOwner(query, fromTelegramId))) return
 
+  const commit = await commitOrderStock(orderId)
+  if (!commit.ok) {
+    await answerCallbackQuery(query.id, `Could not confirm: ${commit.error}`)
+    return
+  }
+
   await updateOrderStatus(orderId, 'confirmed', fromTelegramId)
   await answerCallbackQuery(query.id, 'Order confirmed')
 
@@ -90,6 +114,12 @@ async function selfHandle(query: CallbackQuery, orderId: string, fromTelegramId:
 
   if (!ownerDriver) {
     await answerCallbackQuery(query.id, 'Owner driver record not found.')
+    return
+  }
+
+  const commit = await commitOrderStock(orderId)
+  if (!commit.ok) {
+    await answerCallbackQuery(query.id, `Could not confirm: ${commit.error}`)
     return
   }
 
