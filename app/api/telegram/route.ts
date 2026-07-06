@@ -30,8 +30,10 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * Temporary direct-fetch error reporter for production diagnostics — bypasses
- * lib/telegram.ts entirely so a bug there can't also swallow this message.
+ * Reports webhook handler errors to the owner so failures never go
+ * completely silent (the webhook always returns 200 to Telegram regardless,
+ * so Telegram's own delivery diagnostics never show these). Uses a direct
+ * fetch rather than lib/telegram.ts so a bug there can't also swallow this.
  */
 async function reportErrorToOwner(err: unknown) {
   try {
