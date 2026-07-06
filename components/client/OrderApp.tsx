@@ -5,13 +5,12 @@ import { useTelegram } from '@/components/client/TelegramProvider'
 import { useCart } from '@/components/client/useCart'
 import { Onboarding } from '@/components/client/Onboarding'
 import { Catalogue, type CatalogueCategory } from '@/components/client/Catalogue'
-import { CartSheet } from '@/components/client/CartSheet'
-import { Checkout } from '@/components/client/Checkout'
+import { CartView } from '@/components/client/CartView'
 import { OrderConfirmation } from '@/components/client/OrderConfirmation'
 import { OrderHistory } from '@/components/client/OrderHistory'
 import type { User } from '@/types/index'
 
-type View = 'loading' | 'onboarding' | 'catalogue' | 'cart' | 'checkout' | 'confirmation' | 'orders' | 'error'
+type View = 'loading' | 'onboarding' | 'catalogue' | 'cart' | 'confirmation' | 'orders' | 'error'
 
 export function OrderApp({ qrSlugFromUrl }: { qrSlugFromUrl: string | null }) {
   const { ready, initData, apiFetch } = useTelegram()
@@ -94,28 +93,18 @@ export function OrderApp({ qrSlugFromUrl }: { qrSlugFromUrl: string | null }) {
     )
   }
 
-  if (view === 'checkout' && user) {
+  if (view === 'cart' && user) {
     return (
-      <Checkout
+      <CartView
         user={user}
         qrSlug={qrSlugFromUrl}
-        cartItems={cart.items}
-        onBack={() => setView('cart')}
+        categories={categories}
+        cart={cart}
+        onBack={() => setView('catalogue')}
         onOrderPlaced={(orderId) => {
           setConfirmedOrderId(orderId)
           setView('confirmation')
         }}
-      />
-    )
-  }
-
-  if (view === 'cart') {
-    return (
-      <CartSheet
-        categories={categories}
-        cart={cart}
-        onBack={() => setView('catalogue')}
-        onCheckout={() => setView('checkout')}
       />
     )
   }
