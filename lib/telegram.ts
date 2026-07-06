@@ -53,6 +53,28 @@ export async function editMessageReplyMarkup(
   })
 }
 
+/**
+ * Commercials get an extra /mystats entry in their own command menu via a
+ * chat-scoped override — the default menu (set once, applies to everyone)
+ * intentionally excludes it so regular customers never see it.
+ */
+export async function setCommercialCommands(chatId: string | number) {
+  return telegramRequest('setMyCommands', {
+    scope: { type: 'chat', chat_id: chatId },
+    commands: [
+      { command: 'start', description: 'Start ordering' },
+      { command: 'mystats', description: 'View your referral stats' },
+    ],
+  })
+}
+
+/** Removes the chat-scoped override, falling back to the default (customer) command menu. */
+export async function clearCommercialCommands(chatId: string | number) {
+  return telegramRequest('deleteMyCommands', {
+    scope: { type: 'chat', chat_id: chatId },
+  })
+}
+
 export async function notifyOwner(text: string, replyMarkup?: InlineKeyboardMarkup) {
   return sendMessage(OWNER_TELEGRAM_ID, text, replyMarkup ? { reply_markup: replyMarkup } : undefined)
 }

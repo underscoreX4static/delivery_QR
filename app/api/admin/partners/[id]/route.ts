@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin-auth'
 import { supabaseAdmin } from '@/lib/supabase'
+import { clearCommercialCommands, setCommercialCommands } from '@/lib/telegram'
 
 const ALLOWED_FIELDS = ['name', 'address', 'contact_name', 'contact_phone', 'commission_rate', 'telegram_id', 'is_active']
 
@@ -102,6 +103,12 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
     if (key in body) update[key] = body[key]
   }
 
+  let previousTelegramId: string | null = null
+  if ('telegram_id' in update) {
+    const { data: existing } = await supabaseAdmin.from('partners').select('telegram_id').eq('id', id).single()
+    previousTelegramId = existing?.telegram_id ?? null
+  }
+
   const { data: partner, error } = await supabaseAdmin
     .from('partners')
     .update(update)
@@ -110,5 +117,17 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
     .single()
 
   if (error || !partner) return NextResponse.json({ error: 'Failed to update partner' }, { status: 500 })
+
+  // Give the commercial an extra /mystats entry in their own Telegram command
+  // menu the moment their ID is set, and remove it if it's cleared — never
+  // touches the default (customer) menu.
+  if ('telegram_id' in update) {
+    if (update.telegram_id) {
+      await setCommercialCommands(update.telegram_id as string).catch(() => {})
+    } else if (previousTelegramId) {
+      await clearCommercialCommands(previousTelegramId).catch(() => {})
+    }
+  }
+
   return NextResponse.json({ partner })
 }
