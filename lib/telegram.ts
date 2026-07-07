@@ -48,6 +48,25 @@ export async function sendMessage(chatId: string | number, text: string, options
   return telegramRequest('sendMessage', { chat_id: chatId, text, ...options })
 }
 
+/**
+ * Uploads an image buffer directly to Telegram (multipart/form-data) rather
+ * than requiring a public URL — used for QR codes generated on the fly,
+ * which have nowhere to be hosted.
+ */
+export async function sendPhoto(chatId: string | number, photo: Buffer, caption?: string) {
+  const form = new FormData()
+  form.append('chat_id', String(chatId))
+  if (caption) form.append('caption', caption)
+  form.append('photo', new Blob([new Uint8Array(photo)], { type: 'image/png' }), 'qr.png')
+
+  const res = await fetch(`${API_BASE}/sendPhoto`, { method: 'POST', body: form })
+  const data = await res.json()
+  if (!res.ok || !data.ok) {
+    throw new Error(`Telegram API sendPhoto failed: ${data.description ?? res.statusText}`)
+  }
+  return data.result
+}
+
 export async function answerCallbackQuery(callbackQueryId: string, text?: string) {
   return telegramRequest('answerCallbackQuery', { callback_query_id: callbackQueryId, text })
 }
@@ -65,11 +84,23 @@ export async function editMessageReplyMarkup(
 }
 
 /**
- * The default command menu (set once, applies to every user) only has
- * /start — role-specific commands (/orders for drivers, /mystats for
- * commercials) are added per-chat via Telegram's chat-scoped command menus,
- * so regular customers never see commands meant for someone else.
+ * The default command menu, visible to every user regardless of role.
+ * Role-specific commands (/orders for drivers, /mystats for commercials,
+ * /mybonus for drivers) are added per-chat via Telegram's chat-scoped
+ * command menus instead, so regular customers never see commands meant for
+ * someone else. Not called automatically anywhere — Telegram remembers this
+ * server-side once set, so it only needs to run again if the default set
+ * changes (re-run manually, or via a one-off script).
  */
+export async function setDefaultCommands() {
+  return telegramRequest('setMyCommands', {
+    commands: [
+      { command: 'start', description: 'Start ordering' },
+      { command: 'invite', description: 'Invite a friend, you both get credit' },
+    ],
+  })
+}
+
 async function setChatCommands(chatId: string | number, commands: { command: string; description: string }[]) {
   return telegramRequest('setMyCommands', { scope: { type: 'chat', chat_id: chatId }, commands })
 }

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import type { Message, Update } from 'node-telegram-bot-api'
+import QRCode from 'qrcode'
 import { supabaseAdmin } from '@/lib/supabase'
-import { escapeMarkdown, sendMessage, sendOrderButton } from '@/lib/telegram'
+import { escapeMarkdown, sendMessage, sendOrderButton, sendPhoto } from '@/lib/telegram'
 import { handleCallbackQuery, handleReplyMessage } from '@/lib/telegram-callbacks'
 import { DRIVER_BONUS_MILESTONES } from '@/lib/calculations'
 import { createPendingReferral, getOrCreateReferralCode } from '@/lib/referrals'
@@ -192,10 +193,14 @@ async function handleInvite(message: Message) {
   const botUsername = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME
   const link = `https://t.me/${botUsername}?start=ref_${code}`
 
-  await sendMessage(
+  // A QR code is easier to actually use in person (show a friend your phone,
+  // they scan it) than a text link they'd have to select and forward.
+  const qrBuffer = await QRCode.toBuffer(link, { type: 'png', width: 512, margin: 2 })
+
+  await sendPhoto(
     chatId,
-    `🎁 *Invite a friend, you both get $${settings.referralRewardAmount.toFixed(2)}!*\n\nShare your link:\n${link}\n\nOnce your friend places their first order and HAZE approves it, you'll both get credited automatically.`,
-    { parse_mode: 'Markdown' }
+    qrBuffer,
+    `🎁 Invite a friend, you both get $${settings.referralRewardAmount.toFixed(2)}!\n\nHave them scan this, or share your link:\n${link}\n\nOnce they place their first order and HAZE approves it, you'll both get credited automatically.`
   )
 }
 
