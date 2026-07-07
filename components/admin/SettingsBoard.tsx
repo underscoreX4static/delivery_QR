@@ -19,6 +19,7 @@ interface StoreSettings {
   discountThreshold2: number
   discountRate2: number
   reorderDaysDefault: number
+  bonusPoolRate: number
 }
 
 const DAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -172,6 +173,23 @@ export function SettingsBoard() {
             className="w-24 rounded border border-neutral-300 px-2 py-1 text-xs"
           />
         </Field>
+      </div>
+
+      <div className="rounded-xl border border-neutral-200 bg-white p-4">
+        <h2 className="mb-3 text-sm font-semibold">Commercial bonus pool</h2>
+        <Field label="Share of your net profit set aside (%)">
+          <input
+            type="number"
+            step="0.1"
+            value={settings.bonusPoolRate * 100}
+            onChange={(e) => update('bonusPoolRate', Number(e.target.value) / 100)}
+            className="w-24 rounded border border-neutral-300 px-2 py-1 text-xs"
+          />
+        </Field>
+        <p className="mt-2 text-xs text-neutral-600">
+          On every partner-attributed delivered order, this share of your net profit is set aside into that
+          commercial&apos;s bonus pool, funding their milestone bonuses.
+        </p>
       </div>
 
       <div className="flex items-center gap-3">

@@ -23,6 +23,7 @@ const FIELD_TO_KEY: Record<string, string> = {
   discountThreshold2: 'discount_threshold_2',
   discountRate2: 'discount_rate_2',
   reorderDaysDefault: 'reorder_days_default',
+  bonusPoolRate: 'bonus_pool_rate',
 }
 
 export async function PATCH(request: NextRequest) {

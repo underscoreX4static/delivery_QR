@@ -3,6 +3,7 @@ import type { Message, Update } from 'node-telegram-bot-api'
 import { supabaseAdmin } from '@/lib/supabase'
 import { escapeMarkdown, sendMessage, sendOrderButton } from '@/lib/telegram'
 import { handleCallbackQuery, handleReplyMessage } from '@/lib/telegram-callbacks'
+import { COMMERCIAL_BONUS_MILESTONES } from '@/lib/calculations'
 
 // Telegram redelivers an update if the webhook doesn't respond quickly
 // enough — order-status transitions are idempotent against that already,
@@ -190,7 +191,7 @@ async function handleMyStats(message: Message) {
 
   const { data: partner } = await supabaseAdmin
     .from('partners')
-    .select('id, name, commission_rate')
+    .select('id, name, commission_rate, bonus_pool_balance')
     .eq('telegram_id', telegramId)
     .maybeSingle()
 
@@ -226,6 +227,13 @@ async function handleMyStats(message: Message) {
     .reduce((sum, c) => sum + Number(c.commission_amount), 0)
   const pending = totalEarned - totalPaid
 
+  // totalOrders is delivered orders, which is exactly the milestone metric —
+  // lifetime delivered orders attributed to this partner's QR codes.
+  const nextMilestone = COMMERCIAL_BONUS_MILESTONES.find((m) => m.orders > totalOrders) ?? null
+  const bonusSection = nextMilestone
+    ? `\n🎯 *Next bonus:* ${totalOrders}/${nextMilestone.orders} orders → $${nextMilestone.bonus.toFixed(2)}\n💰 *Bonus pool:* $${(partner.bonus_pool_balance ?? 0).toFixed(2)}\n`
+    : `\n💰 *Bonus pool:* $${(partner.bonus_pool_balance ?? 0).toFixed(2)} (all milestones reached!)\n`
+
   const msg = `
 📊 *Your stats — HAZE Delivery*
 
@@ -239,7 +247,7 @@ async function handleMyStats(message: Message) {
 💵 *Total earned:* $${totalEarned.toFixed(2)}
 ✅ *Paid out:* $${totalPaid.toFixed(2)}
 ⏳ *Pending:* $${pending.toFixed(2)}
-
+${bonusSection}
 Keep spreading! 🔥
   `.trim()
 
