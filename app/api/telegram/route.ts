@@ -183,7 +183,7 @@ async function handleInvite(message: Message) {
   const chatId = message.chat.id
   const telegramId = String(message.from!.id)
 
-  const { data: user } = await supabaseAdmin.from('users').select('id').eq('telegram_id', telegramId).maybeSingle()
+  const { data: user } = await supabaseAdmin.from('users').select('id, credit_balance').eq('telegram_id', telegramId).maybeSingle()
   if (!user) {
     await sendMessage(chatId, 'Open the app once first (tap the menu button) so we know who you are, then try /invite again.')
     return
@@ -192,6 +192,7 @@ async function handleInvite(message: Message) {
   const [code, settings] = await Promise.all([getOrCreateReferralCode(user.id), getSettings()])
   const botUsername = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME
   const link = `https://t.me/${botUsername}?start=ref_${code}`
+  const balance = user.credit_balance ?? 0
 
   // A QR code is easier to actually use in person (show a friend your phone,
   // they scan it) than a text link they'd have to select and forward.
@@ -200,7 +201,8 @@ async function handleInvite(message: Message) {
   await sendPhoto(
     chatId,
     qrBuffer,
-    `🎁 Invite a friend, you both get $${settings.referralRewardAmount.toFixed(2)}!\n\nHave them scan this, or share your link:\n${link}\n\nOnce they place their first order and HAZE approves it, you'll both get credited automatically.`
+    `🎁 Invite a friend, you both get $${settings.referralRewardAmount.toFixed(2)}!\n\nHave them scan this, or share your link:\n${link}\n\nOnce they place their first order and HAZE approves it, you'll both get credited automatically.` +
+      (balance > 0 ? `\n\n💰 You currently have $${balance.toFixed(2)} credit — it'll apply automatically on your next order.` : '')
   )
 }
 

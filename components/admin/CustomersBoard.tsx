@@ -140,6 +140,7 @@ function CustomerDetail({ customer, onClose }: { customer: AdminCustomer; onClos
           <Stat label="Orders" value={String(customer.order_count)} />
           <Stat label="Phone" value={customer.phone ?? '—'} />
           <Stat label="QR source" value={customer.qr_source_name ?? 'Direct'} />
+          <Stat label="Referral credit" value={`$${(customer.credit_balance ?? 0).toFixed(2)}`} />
         </div>
 
         {favourites.length > 0 && (
