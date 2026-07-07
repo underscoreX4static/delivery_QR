@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { Leaderboard } from '@/components/admin/Leaderboard'
 import type { Driver } from '@/types/index'
 
 interface AdminDriver extends Driver {
   active_orders: number
+  lifetime_delivered_orders: number
 }
 
 export function DriversBoard() {
@@ -57,6 +59,20 @@ export function DriversBoard() {
 
   return (
     <div className="flex flex-col gap-4">
+      <Leaderboard
+        title="Top drivers"
+        countLabel="deliveries"
+        detailHref={(id) => `/admin/drivers/${id}`}
+        entries={drivers
+          .filter((d) => !d.is_owner)
+          .map((d) => ({
+            id: d.id,
+            name: `${d.first_name} ${d.last_name ?? ''}`.trim(),
+            count: d.lifetime_delivered_orders,
+            joinedAt: d.created_at,
+          }))}
+      />
+
       <div className="flex justify-end">
         <button
           onClick={() => setShowNewForm((v) => !v)}
@@ -114,11 +130,9 @@ export function DriversBoard() {
             <p className="mt-1 text-xs text-neutral-600">{d.telegram_id}</p>
             <p className="text-xs text-neutral-600">{d.active_orders} active orders</p>
             <div className="mt-2 flex gap-2">
-              {!d.is_owner && (
-                <Link href={`/admin/drivers/${d.id}`} className="flex-1 rounded-lg bg-neutral-900 py-2 text-center text-xs font-medium text-white">
-                  View bonuses →
-                </Link>
-              )}
+              <Link href={`/admin/drivers/${d.id}`} className="flex-1 rounded-lg bg-neutral-900 py-2 text-center text-xs font-medium text-white">
+                View stats →
+              </Link>
               {!d.is_owner && (
                 <button onClick={() => toggleActive(d)} className="flex-1 rounded-lg bg-neutral-100 py-2 text-xs font-medium text-neutral-700">
                   {d.is_active ? 'Deactivate' : 'Activate'}
@@ -153,11 +167,9 @@ export function DriversBoard() {
                 <td className="px-3 py-2">{d.active_orders}</td>
                 <td className="px-3 py-2">{d.is_active ? 'Yes' : 'No'}</td>
                 <td className="px-3 py-2">
-                  {!d.is_owner && (
-                    <Link href={`/admin/drivers/${d.id}`} className="mr-3 text-xs text-blue-600">
-                      View bonuses →
-                    </Link>
-                  )}
+                  <Link href={`/admin/drivers/${d.id}`} className="mr-3 text-xs text-blue-600">
+                    View stats →
+                  </Link>
                   {!d.is_owner && (
                     <button onClick={() => toggleActive(d)} className="text-xs text-blue-600">
                       {d.is_active ? 'Deactivate' : 'Activate'}

@@ -18,20 +18,25 @@ export async function GET() {
 
   if (error || !drivers) return NextResponse.json({ error: 'Failed to load drivers' }, { status: 500 })
 
-  const { data: activeOrders } = await supabaseAdmin
-    .from('orders')
-    .select('driver_id')
-    .in('status', ACTIVE_ORDER_STATUSES)
-    .not('driver_id', 'is', null)
+  const [{ data: activeOrders }, { data: deliveredOrders }] = await Promise.all([
+    supabaseAdmin.from('orders').select('driver_id').in('status', ACTIVE_ORDER_STATUSES).not('driver_id', 'is', null),
+    supabaseAdmin.from('orders').select('driver_id').eq('status', 'delivered').not('driver_id', 'is', null),
+  ])
 
   const activeCountByDriver = new Map<string, number>()
   for (const order of activeOrders ?? []) {
     activeCountByDriver.set(order.driver_id, (activeCountByDriver.get(order.driver_id) ?? 0) + 1)
   }
 
+  const deliveredCountByDriver = new Map<string, number>()
+  for (const order of deliveredOrders ?? []) {
+    deliveredCountByDriver.set(order.driver_id, (deliveredCountByDriver.get(order.driver_id) ?? 0) + 1)
+  }
+
   const withActiveOrders = (drivers as Driver[]).map((driver) => ({
     ...driver,
     active_orders: activeCountByDriver.get(driver.id) ?? 0,
+    lifetime_delivered_orders: deliveredCountByDriver.get(driver.id) ?? 0,
   }))
 
   return NextResponse.json({ drivers: withActiveOrders })

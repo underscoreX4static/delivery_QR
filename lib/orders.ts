@@ -119,15 +119,17 @@ export async function markDelivered(orderId: string, changedBy: string): Promise
     if (qrCode?.partner_id) {
       const { data: partner } = await supabaseAdmin
         .from('partners')
-        .select('commission_rate, first_sale_bonus_amount')
+        .select('commission_rate, first_sale_bonus_amount, welcome_bonus_trigger_orders')
         .eq('id', qrCode.partner_id)
         .single()
 
       if (partner) {
         commissionAmount = round2(order.total * partner.commission_rate)
 
-        // Checked before inserting this order's own commission row, so a
-        // count of 0 here means this delivery is genuinely their first.
+        // Checked before inserting this order's own commission row, so this
+        // count is "how many they had before this delivery" — comparing
+        // against triggerOrders - 1 tells us if *this* delivery is exactly
+        // the Nth one that unlocks the welcome bonus (not necessarily #1).
         const { count: priorCommissions } = await supabaseAdmin
           .from('affiliate_commissions')
           .select('id', { count: 'exact', head: true })
@@ -141,9 +143,10 @@ export async function markDelivered(orderId: string, changedBy: string): Promise
           commission_amount: commissionAmount,
         })
 
-        if ((priorCommissions ?? 0) === 0) {
-          await notifyFirstSaleBonus(qrCode.partner_id, partner.first_sale_bonus_amount ?? 10).catch((err) => {
-            console.error(`First-sale bonus notification failed for order ${orderId}:`, err)
+        const triggerOrders = partner.welcome_bonus_trigger_orders ?? 1
+        if ((priorCommissions ?? 0) === triggerOrders - 1) {
+          await notifyFirstSaleBonus(qrCode.partner_id, partner.first_sale_bonus_amount ?? 10, triggerOrders).catch((err) => {
+            console.error(`Welcome bonus notification failed for order ${orderId}:`, err)
           })
         }
       }
@@ -189,7 +192,11 @@ export async function markDelivered(orderId: string, changedBy: string): Promise
   return { ok: true }
 }
 
-async function notifyFirstSaleBonus(partnerId: string, amount: number): Promise<void> {
+function ordinal(n: number): string {
+  return n === 1 ? '1st' : n === 2 ? '2nd' : n === 3 ? '3rd' : `${n}th`
+}
+
+async function notifyFirstSaleBonus(partnerId: string, amount: number, triggerOrders: number): Promise<void> {
   const { data: partner } = await supabaseAdmin
     .from('partners')
     .select('name, telegram_id')
@@ -197,14 +204,16 @@ async function notifyFirstSaleBonus(partnerId: string, amount: number): Promise<
     .single()
   if (!partner) return
 
+  const ord = ordinal(triggerOrders)
+
   await notifyOwner(
-    `🎉 ${partner.name}'s first referred sale was just delivered — $${amount.toFixed(2)} first-sale bonus owed.`
+    `🎉 ${partner.name} just hit their ${ord} referred sale — $${amount.toFixed(2)} welcome bonus owed.`
   )
 
   if (partner.telegram_id) {
     await sendMessage(
       partner.telegram_id,
-      `🎉 *Congrats on your first sale!*\n\nYou've earned a *$${amount.toFixed(2)} bonus* for bringing in your first customer 🥳\n\nHAZE will arrange payment shortly.`,
+      `🎉 *Congrats!*\n\nYou've reached your ${ord} referral and earned a *$${amount.toFixed(2)} welcome bonus* 🥳\n\nHAZE will arrange payment shortly.`,
       { parse_mode: 'Markdown' }
     ).catch(() => {})
   }

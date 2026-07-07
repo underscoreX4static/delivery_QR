@@ -3,7 +3,10 @@ import { requireAdmin } from '@/lib/admin-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { clearDriverCommands, setDriverCommands } from '@/lib/telegram'
 import { getDriverBonuses } from '@/lib/driver-bonuses'
-import { DRIVER_BONUS_MILESTONES } from '@/lib/calculations'
+import { DRIVER_BONUS_MILESTONES, calculatePayout } from '@/lib/calculations'
+import type { OrderItem } from '@/types/index'
+
+const ACTIVE_ORDER_STATUSES = ['pending', 'confirmed', 'preparing', 'on_the_way']
 
 // is_owner is intentionally not editable here — there must always be exactly
 // one owner driver (seeded at telegram_id 8376671012), so it's read-only in
@@ -19,15 +22,62 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ id
   const { data: driver, error } = await supabaseAdmin.from('drivers').select('*').eq('id', id).single()
   if (error || !driver) return NextResponse.json({ error: 'Driver not found' }, { status: 404 })
 
-  const [{ count: deliveredCount }, bonuses] = await Promise.all([
-    supabaseAdmin.from('orders').select('id', { count: 'exact', head: true }).eq('driver_id', id).eq('status', 'delivered'),
+  const [{ data: orders }, bonuses] = await Promise.all([
+    supabaseAdmin.from('orders').select('*, users(first_name, last_name)').eq('driver_id', id).order('created_at', { ascending: false }),
     getDriverBonuses(id),
   ])
 
-  const lifetimeDeliveredOrders = deliveredCount ?? 0
+  const deliveredOrders = (orders ?? []).filter((o) => o.status === 'delivered')
+  const activeOrders = (orders ?? []).filter((o) => ACTIVE_ORDER_STATUSES.includes(o.status))
+  const lifetimeDeliveredOrders = deliveredOrders.length
+
+  const orderIds = deliveredOrders.map((o) => o.id)
+  const { data: items } = orderIds.length
+    ? await supabaseAdmin.from('order_items').select('*').in('order_id', orderIds)
+    : { data: [] as OrderItem[] }
+
+  const itemsByOrder = new Map<string, OrderItem[]>()
+  for (const item of (items as OrderItem[]) ?? []) {
+    const list = itemsByOrder.get(item.order_id) ?? []
+    list.push(item)
+    itemsByOrder.set(item.order_id, list)
+  }
+
+  let revenueGenerated = 0
+  let totalPayoutEarned = 0
+  for (const order of deliveredOrders) {
+    const orderItems = itemsByOrder.get(order.id) ?? []
+    const costOfGoods = orderItems.reduce((sum, i) => sum + i.unit_cost_price * i.quantity, 0)
+    const payout = calculatePayout({
+      subtotal: order.subtotal,
+      deliveryFee: order.delivery_fee,
+      discount: order.discount,
+      total: order.total,
+      costOfGoods,
+      driverIsOwner: driver.is_owner,
+      partnerCommissionRate: 0,
+    })
+    revenueGenerated += order.total
+    totalPayoutEarned += payout.driverPayout
+  }
+
+  const ordersTable = (orders ?? []).slice(0, 50).map((o) => ({
+    order_id: o.id,
+    created_at: o.created_at,
+    customer_name: `${o.users?.first_name ?? ''} ${o.users?.last_name ?? ''}`.trim() || 'Unknown',
+    total: o.total,
+    status: o.status,
+  }))
 
   return NextResponse.json({
     driver,
+    stats: {
+      lifetime_delivered_orders: lifetimeDeliveredOrders,
+      active_orders: activeOrders.length,
+      revenue_generated: Math.round(revenueGenerated * 100) / 100,
+      total_payout_earned: Math.round(totalPayoutEarned * 100) / 100,
+    },
+    orders: ordersTable,
     bonuses: {
       pool_balance: driver.bonus_pool_balance ?? 0,
       lifetime_delivered_orders: lifetimeDeliveredOrders,

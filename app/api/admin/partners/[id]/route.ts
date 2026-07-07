@@ -12,6 +12,7 @@ const ALLOWED_FIELDS = [
   'telegram_id',
   'is_active',
   'first_sale_bonus_amount',
+  'welcome_bonus_trigger_orders',
 ]
 
 export async function GET(_request: NextRequest, context: { params: Promise<{ id: string }> }) {
@@ -98,9 +99,10 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ id
     customers: [...customersByUser.values()].sort((a, b) => b.total_spent - a.total_spent),
     first_sale_bonus: {
       amount: partner.first_sale_bonus_amount ?? 10,
-      // Earned as soon as they have at least one commission on record —
-      // matches the "first delivered commission" check in markDelivered.
-      earned: (commissions?.length ?? 0) > 0,
+      trigger_orders: partner.welcome_bonus_trigger_orders ?? 1,
+      // Earned once they've reached the configured trigger count — matches
+      // the same comparison markDelivered uses when awarding it.
+      earned: (commissions?.length ?? 0) >= (partner.welcome_bonus_trigger_orders ?? 1),
       paid: partner.first_sale_bonus_paid ?? false,
     },
   })

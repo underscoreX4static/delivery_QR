@@ -35,8 +35,13 @@ interface CustomerRow {
 
 interface FirstSaleBonus {
   amount: number
+  trigger_orders: number
   earned: boolean
   paid: boolean
+}
+
+function ordinal(n: number): string {
+  return n === 1 ? '1st' : n === 2 ? '2nd' : n === 3 ? '3rd' : `${n}th`
 }
 
 export function PartnerDetail({ partnerId }: { partnerId: string }) {
@@ -46,6 +51,7 @@ export function PartnerDetail({ partnerId }: { partnerId: string }) {
   const [customers, setCustomers] = useState<CustomerRow[]>([])
   const [firstSaleBonus, setFirstSaleBonus] = useState<FirstSaleBonus | null>(null)
   const [bonusAmountInput, setBonusAmountInput] = useState('')
+  const [triggerOrdersInput, setTriggerOrdersInput] = useState('1')
   const [markingPaid, setMarkingPaid] = useState(false)
 
   const load = () => {
@@ -58,6 +64,7 @@ export function PartnerDetail({ partnerId }: { partnerId: string }) {
         setCustomers(d.customers ?? [])
         setFirstSaleBonus(d.first_sale_bonus ?? null)
         setBonusAmountInput(String(d.first_sale_bonus?.amount ?? 10))
+        setTriggerOrdersInput(String(d.first_sale_bonus?.trigger_orders ?? 1))
       })
   }
 
@@ -68,6 +75,16 @@ export function PartnerDetail({ partnerId }: { partnerId: string }) {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ first_sale_bonus_amount: Number(bonusAmountInput) }),
+    })
+    load()
+  }
+
+  const saveTriggerOrders = async (value: string) => {
+    setTriggerOrdersInput(value)
+    await fetch(`/api/admin/partners/${partnerId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ welcome_bonus_trigger_orders: Number(value) }),
     })
     load()
   }
@@ -128,7 +145,7 @@ export function PartnerDetail({ partnerId }: { partnerId: string }) {
 
       {firstSaleBonus && (
         <div className="rounded-xl border border-neutral-200 bg-white p-4">
-          <h2 className="mb-3 text-sm font-semibold">First-sale bonus</h2>
+          <h2 className="mb-3 text-sm font-semibold">Welcome bonus</h2>
           <div className="flex flex-wrap items-end gap-3">
             <label className="flex flex-col gap-1 text-[10px] font-medium uppercase text-neutral-600">
               Bonus amount ($)
@@ -141,12 +158,28 @@ export function PartnerDetail({ partnerId }: { partnerId: string }) {
                 className="w-24 rounded border border-neutral-300 px-2 py-1 text-xs"
               />
             </label>
+            <label className="flex flex-col gap-1 text-[10px] font-medium uppercase text-neutral-600">
+              Unlocks on
+              <select
+                value={triggerOrdersInput}
+                onChange={(e) => saveTriggerOrders(e.target.value)}
+                className="rounded border border-neutral-300 px-2 py-1 text-xs"
+              >
+                <option value="1">1st sale</option>
+                <option value="2">2nd sale</option>
+                <option value="3">3rd sale</option>
+              </select>
+            </label>
             <p className="text-xs text-neutral-600">Modulable per commercial — some get more, some less.</p>
           </div>
 
           <div className="mt-3 flex items-center justify-between text-sm">
             <div>
-              {!firstSaleBonus.earned && <p className="text-neutral-600">Not earned yet — awarded on their first delivered referral.</p>}
+              {!firstSaleBonus.earned && (
+                <p className="text-neutral-600">
+                  Not earned yet — awarded on their {ordinal(firstSaleBonus.trigger_orders)} delivered referral.
+                </p>
+              )}
               {firstSaleBonus.earned && firstSaleBonus.paid && (
                 <p className="font-medium text-green-700">✅ Earned and paid</p>
               )}

@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { Leaderboard } from '@/components/admin/Leaderboard'
 import type { Partner } from '@/types/index'
 
 interface AdminPartner extends Partner {
   commission_owed: number
+  unique_customers_scanned: number
 }
 
 export function PartnersBoard() {
@@ -38,6 +40,18 @@ export function PartnersBoard() {
 
   return (
     <div className="flex flex-col gap-4">
+      <Leaderboard
+        title="Top commercials"
+        countLabel="customers scanned"
+        detailHref={(id) => `/admin/partners/${id}`}
+        entries={partners.map((p) => ({
+          id: p.id,
+          name: p.name,
+          count: p.unique_customers_scanned,
+          joinedAt: p.created_at,
+        }))}
+      />
+
       <div className="flex justify-end">
         <button
           onClick={() => setShowNewForm((v) => !v)}
@@ -169,6 +183,7 @@ function NewPartnerForm({ onCreated }: { onCreated: () => void }) {
   const [contactPhone, setContactPhone] = useState('')
   const [commissionPercent, setCommissionPercent] = useState('5')
   const [firstSaleBonus, setFirstSaleBonus] = useState('10')
+  const [triggerOrders, setTriggerOrders] = useState('1')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
@@ -186,6 +201,7 @@ function NewPartnerForm({ onCreated }: { onCreated: () => void }) {
           contact_phone: contactPhone,
           commission_rate: Number(commissionPercent) / 100,
           first_sale_bonus_amount: Number(firstSaleBonus),
+          welcome_bonus_trigger_orders: Number(triggerOrders),
         }),
       })
       const data = await res.json()
@@ -217,11 +233,21 @@ function NewPartnerForm({ onCreated }: { onCreated: () => void }) {
           className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-base sm:w-24 sm:text-xs"
         />
         <input
-          placeholder="First-sale bonus $"
+          placeholder="Welcome bonus $"
           value={firstSaleBonus}
           onChange={(e) => setFirstSaleBonus(e.target.value)}
           className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-base sm:w-32 sm:text-xs"
         />
+        <select
+          value={triggerOrders}
+          onChange={(e) => setTriggerOrders(e.target.value)}
+          title="Which delivered referral unlocks the welcome bonus"
+          className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-base sm:w-40 sm:text-xs"
+        >
+          <option value="1">Unlock on 1st sale</option>
+          <option value="2">Unlock on 2nd sale</option>
+          <option value="3">Unlock on 3rd sale</option>
+        </select>
       </div>
       {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
       <button

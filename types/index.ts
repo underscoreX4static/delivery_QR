@@ -27,14 +27,22 @@ export interface Partner {
   /** Requires migration: alter table partners add column if not exists telegram_id text; */
   telegram_id?: string | null
   /**
-   * Flat one-time bonus paid on this commercial's first-ever delivered
-   * referral — modulable per commercial (some get $5, some $10+) rather
-   * than a fixed platform-wide amount.
+   * Flat one-time welcome bonus paid once this commercial reaches
+   * welcome_bonus_trigger_orders delivered referrals — modulable per
+   * commercial (some get $5, some $10+) rather than a fixed platform-wide
+   * amount.
    * Requires migration: alter table partners add column if not exists first_sale_bonus_amount decimal(10,2) not null default 10;
    */
   first_sale_bonus_amount?: number
   /** Requires migration: alter table partners add column if not exists first_sale_bonus_paid boolean not null default false; */
   first_sale_bonus_paid?: boolean
+  /**
+   * Which delivered-referral number unlocks the welcome bonus above — 1, 2,
+   * or 3. Not always the literal first sale: some deals are structured to
+   * reward loyalty after a couple of referrals instead.
+   * Requires migration: alter table partners add column if not exists welcome_bonus_trigger_orders int not null default 1;
+   */
+  welcome_bonus_trigger_orders?: number
 }
 
 export interface QrCode {

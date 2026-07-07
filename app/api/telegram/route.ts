@@ -236,7 +236,7 @@ async function handleMyStats(message: Message) {
 
   const { data: partner } = await supabaseAdmin
     .from('partners')
-    .select('id, name, commission_rate, first_sale_bonus_amount, first_sale_bonus_paid')
+    .select('id, name, commission_rate, first_sale_bonus_amount, first_sale_bonus_paid, welcome_bonus_trigger_orders')
     .eq('telegram_id', telegramId)
     .maybeSingle()
 
@@ -273,12 +273,14 @@ async function handleMyStats(message: Message) {
   const pending = totalEarned - totalPaid
 
   const bonusAmount = partner.first_sale_bonus_amount ?? 10
+  const triggerOrders = partner.welcome_bonus_trigger_orders ?? 1
+  const ord = triggerOrders === 1 ? '1st' : triggerOrders === 2 ? '2nd' : triggerOrders === 3 ? '3rd' : `${triggerOrders}th`
   const bonusSection =
-    totalOrders === 0
-      ? `\n🎁 *First-sale bonus:* $${bonusAmount.toFixed(2)} — earned on your first delivered order\n`
+    totalOrders < triggerOrders
+      ? `\n🎁 *Welcome bonus:* $${bonusAmount.toFixed(2)} — unlocks on your ${ord} delivered order (${totalOrders}/${triggerOrders})\n`
       : partner.first_sale_bonus_paid
-        ? `\n🎁 *First-sale bonus:* $${bonusAmount.toFixed(2)} — paid ✅\n`
-        : `\n🎁 *First-sale bonus:* $${bonusAmount.toFixed(2)} — earned, awaiting payment\n`
+        ? `\n🎁 *Welcome bonus:* $${bonusAmount.toFixed(2)} — paid ✅\n`
+        : `\n🎁 *Welcome bonus:* $${bonusAmount.toFixed(2)} — earned, awaiting payment\n`
 
   const msg = `
 📊 *Your stats — HAZE Delivery*
