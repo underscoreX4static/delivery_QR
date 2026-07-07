@@ -458,6 +458,7 @@ export function CartView({
                 <Row label="Subtotal" value={preview.subtotal} />
                 <Row label="Delivery fee" value={preview.delivery_fee} />
                 <Row label="Discount" value={-preview.discount} />
+                {preview.credit_applied > 0 && <Row label="Referral credit" value={-preview.credit_applied} />}
                 <div className="mt-1 flex justify-between border-t border-neutral-200 pt-1 font-semibold">
                   <span>Total</span>
                   <span>${preview.total.toFixed(2)}</span>

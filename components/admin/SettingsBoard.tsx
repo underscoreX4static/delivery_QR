@@ -20,6 +20,7 @@ interface StoreSettings {
   discountRate2: number
   reorderDaysDefault: number
   bonusPoolRate: number
+  referralRewardAmount: number
 }
 
 const DAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -189,6 +190,26 @@ export function SettingsBoard() {
         <p className="mt-2 text-xs text-neutral-600">
           On every partner-attributed delivered order, this share of your net profit is set aside into that
           commercial&apos;s bonus pool, funding their milestone bonuses.
+        </p>
+      </div>
+
+      <div className="rounded-xl border border-neutral-200 bg-white p-4">
+        <h2 className="mb-3 text-sm font-semibold">Customer referrals</h2>
+        <Field label="Reward per referral ($, each side)">
+          <input
+            type="number"
+            step="0.5"
+            value={settings.referralRewardAmount}
+            onChange={(e) => update('referralRewardAmount', Number(e.target.value))}
+            className="w-24 rounded border border-neutral-300 px-2 py-1 text-xs"
+          />
+        </Field>
+        <p className="mt-2 text-xs text-neutral-600">
+          Credited to both the referrer and the new customer once you approve a pending referral in{' '}
+          <a href="/admin/referrals" className="underline">
+            /admin/referrals
+          </a>
+          .
         </p>
       </div>
 

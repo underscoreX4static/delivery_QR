@@ -4,6 +4,8 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { escapeMarkdown, sendMessage, sendOrderButton } from '@/lib/telegram'
 import { handleCallbackQuery, handleReplyMessage } from '@/lib/telegram-callbacks'
 import { DRIVER_BONUS_MILESTONES } from '@/lib/calculations'
+import { createPendingReferral, getOrCreateReferralCode } from '@/lib/referrals'
+import { getSettings } from '@/lib/settings'
 
 // Telegram redelivers an update if the webhook doesn't respond quickly
 // enough — order-status transitions are idempotent against that already,
@@ -89,6 +91,8 @@ async function handleCommand(message: Message) {
     await handleMyStats(message)
   } else if (command === '/mybonus') {
     await handleMyBonus(message)
+  } else if (command === '/invite') {
+    await handleInvite(message)
   }
 }
 
@@ -112,6 +116,16 @@ async function handleStart(message: Message, payload: string) {
     if (qrCode?.is_active) qrCodeId = qrCode.id
   }
 
+  let referrerUserId: string | null = null
+  if (payload.startsWith('ref_')) {
+    const { data: referrer } = await supabaseAdmin
+      .from('users')
+      .select('id')
+      .eq('referral_code', payload.slice(4))
+      .maybeSingle()
+    referrerUserId = referrer?.id ?? null
+  }
+
   const { data: existingUser } = await supabaseAdmin
     .from('users')
     .select('id')
@@ -119,6 +133,7 @@ async function handleStart(message: Message, payload: string) {
     .maybeSingle()
 
   let userId: string
+  const isNewUser = !existingUser
 
   if (existingUser) {
     userId = existingUser.id
@@ -150,7 +165,38 @@ async function handleStart(message: Message, payload: string) {
     })
   }
 
+  // Only a genuinely new signup can be referred — an existing customer
+  // opening an old referral link again must not retroactively attach a
+  // referrer or spawn a duplicate pending review.
+  if (isNewUser && referrerUserId) {
+    await createPendingReferral(referrerUserId, userId).catch((err) => {
+      console.error('Failed to create pending referral:', err)
+    })
+  }
+
   await sendOrderButton(chatId, qrSlug ?? undefined)
+}
+
+/** Self-serve referral link for customers — credit for both sides once HAZE approves the referral. */
+async function handleInvite(message: Message) {
+  const chatId = message.chat.id
+  const telegramId = String(message.from!.id)
+
+  const { data: user } = await supabaseAdmin.from('users').select('id').eq('telegram_id', telegramId).maybeSingle()
+  if (!user) {
+    await sendMessage(chatId, 'Open the app once first (tap the menu button) so we know who you are, then try /invite again.')
+    return
+  }
+
+  const [code, settings] = await Promise.all([getOrCreateReferralCode(user.id), getSettings()])
+  const botUsername = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME
+  const link = `https://t.me/${botUsername}?start=ref_${code}`
+
+  await sendMessage(
+    chatId,
+    `🎁 *Invite a friend, you both get $${settings.referralRewardAmount.toFixed(2)}!*\n\nShare your link:\n${link}\n\nOnce your friend places their first order and HAZE approves it, you'll both get credited automatically.`,
+    { parse_mode: 'Markdown' }
+  )
 }
 
 async function handleDriverOrders(message: Message) {

@@ -8,6 +8,7 @@ const LINKS = [
   { href: '/admin/products', label: 'Products' },
   { href: '/admin/inventory', label: 'Inventory' },
   { href: '/admin/customers', label: 'Customers' },
+  { href: '/admin/referrals', label: 'Referrals' },
   { href: '/admin/partners', label: 'Commercials' },
   { href: '/admin/qr-codes', label: 'QR Codes' },
   { href: '/admin/drivers', label: 'Drivers' },

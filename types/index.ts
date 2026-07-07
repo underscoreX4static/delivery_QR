@@ -73,6 +73,25 @@ export interface User {
   created_at: string
   /** Requires migration: alter table users add column if not exists notes text; */
   notes?: string | null
+  /** Requires migration: alter table users add column if not exists referral_code text unique; */
+  referral_code?: string | null
+  /** Requires migration: alter table users add column if not exists referred_by uuid references users(id) on delete set null; */
+  referred_by?: string | null
+  /** Requires migration: alter table users add column if not exists credit_balance decimal(10,2) not null default 0; */
+  credit_balance?: number
+}
+
+export type ReferralStatus = 'pending' | 'approved' | 'rejected'
+
+export interface Referral {
+  id: string
+  referrer_id: string
+  referred_id: string
+  status: ReferralStatus
+  reward_amount: number
+  created_at: string
+  reviewed_at: string | null
+  reviewed_by: string | null
 }
 
 export interface Category {
@@ -256,6 +275,7 @@ export interface CartPreview {
   delivery_fee: number
   discount: number
   discount_rate: number
+  credit_applied: number
   total: number
 }
 

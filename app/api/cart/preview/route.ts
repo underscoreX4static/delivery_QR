@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireTelegramUser } from '@/lib/client-auth'
+import { getOrCreateUser, requireTelegramUser } from '@/lib/client-auth'
 import { planConsumption, validateCartItems } from '@/lib/inventory'
 import { calculateOrderPricing } from '@/lib/calculations'
 import { getSettings } from '@/lib/settings'
@@ -17,9 +17,12 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const plan = await planConsumption(items)
-    const settings = await getSettings()
-    const pricing = calculateOrderPricing(plan.subtotal, settings)
+    const [plan, settings, user] = await Promise.all([
+      planConsumption(items),
+      getSettings(),
+      getOrCreateUser(telegramUser),
+    ])
+    const pricing = calculateOrderPricing(plan.subtotal, settings, user.credit_balance ?? 0)
 
     const preview: CartPreview = {
       plan,
@@ -27,6 +30,7 @@ export async function POST(request: NextRequest) {
       delivery_fee: pricing.deliveryFee,
       discount: pricing.discount,
       discount_rate: pricing.discountRate,
+      credit_applied: pricing.creditApplied,
       total: pricing.total,
     }
 

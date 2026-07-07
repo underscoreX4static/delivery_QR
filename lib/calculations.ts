@@ -24,16 +24,21 @@ export interface OrderPricing {
   discount: number
   /** The discount rate actually applied (0 if under the first threshold) — lets callers show which tier is active. */
   discountRate: number
+  /** Referral credit actually applied — never more than the customer's balance, never more than what's left to pay. */
+  creditApplied: number
   total: number
 }
 
 /**
- * Computes delivery fee, discount and total for a given subtotal, driven
- * entirely by the `settings` table values passed in — never hardcoded.
- * Two discount tiers stack upward: subtotal >= discountThreshold2 gets
- * discountRate2, subtotal >= discountThreshold gets discountRate, else none.
+ * Computes delivery fee, discount, referral-credit, and total for a given
+ * subtotal, driven entirely by the `settings` table values passed in — never
+ * hardcoded. Two discount tiers stack upward: subtotal >= discountThreshold2
+ * gets discountRate2, subtotal >= discountThreshold gets discountRate, else
+ * none. Credit is applied last, after delivery fee and discount, and is
+ * capped so it can never push the total below zero or exceed what the
+ * customer actually has.
  */
-export function calculateOrderPricing(subtotal: number, settings: PricingSettings): OrderPricing {
+export function calculateOrderPricing(subtotal: number, settings: PricingSettings, availableCredit = 0): OrderPricing {
   const deliveryFee = subtotal >= settings.freeDeliveryThreshold ? 0 : settings.deliveryFee
 
   const discountRate =
@@ -44,8 +49,11 @@ export function calculateOrderPricing(subtotal: number, settings: PricingSetting
         : 0
 
   const discount = round2(subtotal * discountRate)
-  const total = round2(subtotal + deliveryFee - discount)
-  return { subtotal: round2(subtotal), deliveryFee, discount, discountRate, total }
+  const preCreditTotal = round2(subtotal + deliveryFee - discount)
+  const creditApplied = round2(Math.min(Math.max(availableCredit, 0), preCreditTotal))
+  const total = round2(preCreditTotal - creditApplied)
+
+  return { subtotal: round2(subtotal), deliveryFee, discount, discountRate, creditApplied, total }
 }
 
 export interface PayoutInput {

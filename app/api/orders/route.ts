@@ -7,6 +7,7 @@ import { getSettings } from '@/lib/settings'
 import { getSlotSettings, isStoreOpenNow, normalizeSlotIso } from '@/lib/slots'
 import { isAddressInDeliveryZone } from '@/lib/zones'
 import { sendMessage, sendNewOrderNotification } from '@/lib/telegram'
+import { deductCredit } from '@/lib/referrals'
 
 const ACTIVE_ORDER_STATUSES = ['pending', 'confirmed', 'preparing', 'on_the_way']
 const MAX_ACTIVE_ORDERS_PER_USER = 3
@@ -126,7 +127,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const pricing = calculateOrderPricing(plan.subtotal, settings)
+    const pricing = calculateOrderPricing(plan.subtotal, settings, user.credit_balance ?? 0)
 
     const { data: order, error: orderError } = await supabaseAdmin
       .from('orders')
@@ -138,6 +139,7 @@ export async function POST(request: NextRequest) {
         delivery_fee: pricing.deliveryFee,
         subtotal: pricing.subtotal,
         discount: pricing.discount,
+        credit_applied: pricing.creditApplied,
         total: pricing.total,
         notes,
         scheduled_at: scheduledAt,
@@ -179,10 +181,16 @@ export async function POST(request: NextRequest) {
       changed_by: telegramUser.telegram_id,
     })
 
+    if (pricing.creditApplied > 0) {
+      await deductCredit(user.id, pricing.creditApplied).catch((err) => {
+        console.error(`Failed to deduct applied credit for order ${order.id}:`, err)
+      })
+    }
+
     const summary = [
       `Customer: ${user.first_name ?? 'Unknown'} (${user.telegram_id})`,
       `Address: ${deliveryAddress}`,
-      `Subtotal: $${pricing.subtotal.toFixed(2)} · Delivery: $${pricing.deliveryFee.toFixed(2)} · Discount: $${pricing.discount.toFixed(2)}`,
+      `Subtotal: $${pricing.subtotal.toFixed(2)} · Delivery: $${pricing.deliveryFee.toFixed(2)} · Discount: $${pricing.discount.toFixed(2)}${pricing.creditApplied > 0 ? ` · Credit: $${pricing.creditApplied.toFixed(2)}` : ''}`,
       `Total: $${pricing.total.toFixed(2)}`,
       scheduledAt ? `Scheduled: ${scheduledAt}` : 'ASAP',
     ].join('\n')

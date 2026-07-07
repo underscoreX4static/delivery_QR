@@ -8,6 +8,8 @@ export interface StoreSettings extends PricingSettings {
   reorderDaysDefault: number
   /** Share of the owner's net profit per partner-attributed order that funds that partner's bonus pool. */
   bonusPoolRate: number
+  /** Credit given to BOTH the referrer and the referred customer once a referral is admin-approved. */
+  referralRewardAmount: number
 }
 
 const DEFAULTS: StoreSettings = {
@@ -19,6 +21,7 @@ const DEFAULTS: StoreSettings = {
   discountRate2: 0.15,
   reorderDaysDefault: 7,
   bonusPoolRate: 0.1,
+  referralRewardAmount: 20,
 }
 
 export async function getSettings(): Promise<StoreSettings> {
@@ -36,6 +39,7 @@ export async function getSettings(): Promise<StoreSettings> {
     discountRate2: Number(map.discount_rate_2 ?? DEFAULTS.discountRate2),
     reorderDaysDefault: Number(map.reorder_days_default ?? DEFAULTS.reorderDaysDefault),
     bonusPoolRate: Number(map.bonus_pool_rate ?? DEFAULTS.bonusPoolRate),
+    referralRewardAmount: Number(map.referral_reward_amount ?? DEFAULTS.referralRewardAmount),
   }
 }
 
