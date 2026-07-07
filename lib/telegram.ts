@@ -13,6 +13,17 @@ interface SendMessageOptions {
 }
 
 /**
+ * Escapes legacy Telegram Markdown's special characters (parse_mode:
+ * 'Markdown', not MarkdownV2) in untrusted text — e.g. a commercial's own
+ * name — before interpolating it into a formatted message. Without this, a
+ * name containing `_`, `*`, `` ` `` or `[` breaks the intended formatting or
+ * can fail the send outright.
+ */
+export function escapeMarkdown(text: string): string {
+  return text.replace(/([_*`[])/g, '\\$1')
+}
+
+/**
  * Thin fetch wrapper around the Telegram Bot HTTP API. Deliberately avoids
  * the node-telegram-bot-api client library — it shells out to the long-
  * deprecated `request` package, which fails silently in some serverless

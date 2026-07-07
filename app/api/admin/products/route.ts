@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin-auth'
 import { supabaseAdmin } from '@/lib/supabase'
-import { refreshProductPrice } from '@/lib/inventory'
+import { getCurrentPrices } from '@/lib/inventory'
 import type { Product } from '@/types/index'
 
 export async function GET() {
@@ -15,15 +15,17 @@ export async function GET() {
 
   if (error || !products) return NextResponse.json({ error: 'Failed to load products' }, { status: 500 })
 
-  const withPrice = await Promise.all(
-    (products as (Product & { categories: { name: string } | null; product_batches: { id: string; quantity_remaining: number; is_active: boolean }[] })[]).map(
-      async (product) => ({
-        ...product,
-        current_price: await refreshProductPrice(product.id),
-        batch_count: product.product_batches.filter((b) => b.is_active).length,
-      })
-    )
-  )
+  const typedProducts = products as (Product & {
+    categories: { name: string } | null
+    product_batches: { id: string; quantity_remaining: number; is_active: boolean }[]
+  })[]
+
+  const priceByProduct = await getCurrentPrices(typedProducts.map((p) => p.id))
+  const withPrice = typedProducts.map((product) => ({
+    ...product,
+    current_price: priceByProduct.get(product.id) ?? null,
+    batch_count: product.product_batches.filter((b) => b.is_active).length,
+  }))
 
   return NextResponse.json({ products: withPrice })
 }

@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabase'
 import { commitConsumption, refundConsumption } from '@/lib/inventory'
+import { notifyOwner } from '@/lib/telegram'
 import type { Order, OrderItem, OrderStatus } from '@/types/index'
 
 // Single home for order lifecycle transitions and their side effects (stock
@@ -22,6 +23,15 @@ export async function getOrderItems(orderId: string): Promise<OrderItem[]> {
   return data as OrderItem[]
 }
 
+/**
+ * Updates orders.status and appends to order_status_history. These are two
+ * separate writes with no transaction tying them together — but a failure
+ * on the history insert must not fail the whole transition: the status
+ * change already succeeded by that point, and throwing here would make the
+ * caller report a false failure back to the customer/driver even though
+ * their action actually worked. The history row is informational, so a
+ * failure to write it is surfaced to the owner instead of blocking anything.
+ */
 async function recordStatusChange(orderId: string, status: OrderStatus, changedBy: string): Promise<void> {
   const { error } = await supabaseAdmin.from('orders').update({ status }).eq('id', orderId)
   if (error) throw new Error(`Failed to update order ${orderId} to ${status}: ${error.message}`)
@@ -29,7 +39,13 @@ async function recordStatusChange(orderId: string, status: OrderStatus, changedB
   const { error: historyError } = await supabaseAdmin
     .from('order_status_history')
     .insert({ order_id: orderId, status, changed_by: changedBy })
-  if (historyError) throw new Error(`Failed to log status history for ${orderId}: ${historyError.message}`)
+
+  if (historyError) {
+    console.error(`Failed to log status history for order ${orderId}:`, historyError.message)
+    await notifyOwner(
+      `⚠️ Order #${orderId.slice(0, 8)} moved to "${status}" but its history log failed to write: ${historyError.message}`
+    ).catch(() => {})
+  }
 }
 
 /**

@@ -12,9 +12,16 @@ async function alreadySettledOrderIds(): Promise<Set<string>> {
   return new Set((data ?? []).map((r) => r.order_id))
 }
 
-async function costOfGoodsForOrder(orderId: string): Promise<number> {
-  const { data } = await supabaseAdmin.from('order_items').select('*').eq('order_id', orderId)
-  return ((data as OrderItem[]) ?? []).reduce((sum, i) => sum + i.unit_cost_price * i.quantity, 0)
+/** Sums unit_cost_price × quantity per order in a single grouped query rather than one per order. */
+async function costOfGoodsByOrder(orderIds: string[]): Promise<Map<string, number>> {
+  const result = new Map<string, number>()
+  if (orderIds.length === 0) return result
+
+  const { data } = await supabaseAdmin.from('order_items').select('*').in('order_id', orderIds)
+  for (const item of (data as OrderItem[]) ?? []) {
+    result.set(item.order_id, (result.get(item.order_id) ?? 0) + item.unit_cost_price * item.quantity)
+  }
+  return result
 }
 
 /**
@@ -49,10 +56,12 @@ export async function createDriverSettlement(driverId: string, proposedBy: strin
     return { ok: false, error: 'No unsettled delivered orders for this driver' }
   }
 
+  const costOfGoodsMap = await costOfGoodsByOrder(eligibleOrders.map((o) => o.id))
+
   let totalCash = 0
   let payoutAmount = 0
   for (const order of eligibleOrders) {
-    const costOfGoods = await costOfGoodsForOrder(order.id)
+    const costOfGoods = costOfGoodsMap.get(order.id) ?? 0
     const payout = calculatePayout({
       subtotal: order.subtotal,
       deliveryFee: order.delivery_fee,

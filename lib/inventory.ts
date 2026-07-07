@@ -201,14 +201,35 @@ async function incrementBatch(batchId: string, quantity: number): Promise<void> 
 }
 
 /**
- * Returns the current live display price for a product — the sell price of
- * its oldest active batch with remaining stock. There is no cached price
- * column on `products`; this is always computed from batch state so it can
- * never drift out of sync.
+ * Batched version of refreshProductPrice for many products at once — the
+ * catalogue endpoint is the single most-called route in the app and grows
+ * linearly with the number of products, so pricing every product with its
+ * own query (N+1) doesn't scale the way a one-off admin lookup can afford to.
  */
-export async function refreshProductPrice(productId: string): Promise<number | null> {
-  const batches = await activeBatchesForProduct(productId)
-  return batches.length > 0 ? batches[0].sell_price : null
+export async function getCurrentPrices(productIds: string[]): Promise<Map<string, number | null>> {
+  const priceByProduct = new Map<string, number | null>()
+  if (productIds.length === 0) return priceByProduct
+
+  const { data, error } = await supabaseAdmin
+    .from('product_batches')
+    .select('product_id, sell_price, received_at')
+    .in('product_id', productIds)
+    .eq('is_active', true)
+    .gt('quantity_remaining', 0)
+    .order('received_at', { ascending: true })
+
+  if (error) throw new Error(`Failed to load batch prices: ${error.message}`)
+
+  for (const row of data ?? []) {
+    // First row per product (received_at ascending) is the FIFO-oldest
+    // active batch — same precedence activeBatchesForProduct() uses.
+    if (!priceByProduct.has(row.product_id)) priceByProduct.set(row.product_id, row.sell_price)
+  }
+  for (const id of productIds) {
+    if (!priceByProduct.has(id)) priceByProduct.set(id, null)
+  }
+
+  return priceByProduct
 }
 
 function round2(n: number): number {

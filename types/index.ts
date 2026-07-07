@@ -80,6 +80,8 @@ export interface Product {
   avg_daily_units: number
   is_active: boolean
   created_at: string
+  /** Requires migration: alter table products add column if not exists last_restock_alert_at timestamptz; */
+  last_restock_alert_at?: string | null
 }
 
 export interface ProductBatch {

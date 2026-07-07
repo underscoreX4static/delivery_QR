@@ -111,17 +111,20 @@ export async function refreshInventoryIntelligence(): Promise<{ productsUpdated:
   return { productsUpdated: products.length, alertsSent }
 }
 
+/**
+ * Dedupe state lives on products.last_restock_alert_at rather than the
+ * settings table — settings is config (per its own table comment: "never
+ * transient state"), and a key-per-product there would grow unboundedly and
+ * never get cleaned up as products are added over time.
+ */
 async function maybeSendRestockAlert(
   product: Product,
   tier: VelocityTier,
   avgDailyUnits: number,
   daysRemaining: number
 ): Promise<boolean> {
-  const dedupeKey = `last_restock_alert:${product.id}`
-  const { data: existing } = await supabaseAdmin.from('settings').select('value').eq('key', dedupeKey).maybeSingle()
-
-  if (existing) {
-    const lastSent = new Date(existing.value).getTime()
+  if (product.last_restock_alert_at) {
+    const lastSent = new Date(product.last_restock_alert_at).getTime()
     if (Date.now() - lastSent < 24 * 60 * 60 * 1000) return false
   }
 
@@ -135,9 +138,7 @@ async function maybeSendRestockAlert(
     { inline_keyboard: [[{ text: '➕ Add batch', url: `${appUrl}/admin/products` }]] }
   )
 
-  await supabaseAdmin
-    .from('settings')
-    .upsert({ key: dedupeKey, value: new Date().toISOString() }, { onConflict: 'key' })
+  await supabaseAdmin.from('products').update({ last_restock_alert_at: new Date().toISOString() }).eq('id', product.id)
 
   return true
 }

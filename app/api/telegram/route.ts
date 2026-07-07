@@ -1,8 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server'
 import type { Message, Update } from 'node-telegram-bot-api'
 import { supabaseAdmin } from '@/lib/supabase'
-import { sendMessage, sendOrderButton } from '@/lib/telegram'
+import { escapeMarkdown, sendMessage, sendOrderButton } from '@/lib/telegram'
 import { handleCallbackQuery, handleReplyMessage } from '@/lib/telegram-callbacks'
+
+// Telegram redelivers an update if the webhook doesn't respond quickly
+// enough — order-status transitions are idempotent against that already,
+// but outbound notifications aren't, so a redelivery can send a customer the
+// same "your order is on the way" message twice. Module-level state persists
+// across warm invocations of the same serverless instance, which covers the
+// timescale (seconds) Telegram actually redelivers on; a cold start losing
+// this history is an acceptable degradation for what's a politeness fix, not
+// a correctness one.
+const MAX_TRACKED_UPDATE_IDS = 500
+const processedUpdateIds = new Set<number>()
+
+function alreadyProcessed(updateId: number): boolean {
+  if (processedUpdateIds.has(updateId)) return true
+
+  processedUpdateIds.add(updateId)
+  if (processedUpdateIds.size > MAX_TRACKED_UPDATE_IDS) {
+    const oldest = processedUpdateIds.values().next().value
+    if (oldest !== undefined) processedUpdateIds.delete(oldest)
+  }
+  return false
+}
 
 export async function POST(request: NextRequest) {
   const secret = request.headers.get('x-telegram-bot-api-secret-token')
@@ -11,6 +33,10 @@ export async function POST(request: NextRequest) {
   }
 
   const update: Update = await request.json()
+
+  if (alreadyProcessed(update.update_id)) {
+    return NextResponse.json({ ok: true })
+  }
 
   try {
     if (update.callback_query) {
@@ -203,7 +229,7 @@ async function handleMyStats(message: Message) {
   const msg = `
 📊 *Your stats — HAZE Delivery*
 
-👋 Hey ${partner.name}!
+👋 Hey ${escapeMarkdown(partner.name)}!
 
 🔗 *Scans:* ${totalScans ?? 0} total, ${uniqueUserCount} unique users
 🛒 *Orders generated:* ${totalOrders}

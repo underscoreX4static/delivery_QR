@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireTelegramUser } from '@/lib/client-auth'
 import { supabaseAdmin } from '@/lib/supabase'
-import { refreshProductPrice } from '@/lib/inventory'
+import { getCurrentPrices } from '@/lib/inventory'
 import type { Category, Product } from '@/types/index'
 
 export async function GET(request: NextRequest) {
@@ -23,12 +23,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to load catalogue' }, { status: 500 })
   }
 
-  const productsWithPrice = await Promise.all(
-    (products as Product[]).map(async (product) => ({
-      ...product,
-      current_price: await refreshProductPrice(product.id),
-    }))
-  )
+  const priceByProduct = await getCurrentPrices((products as Product[]).map((p) => p.id))
+  const productsWithPrice = (products as Product[]).map((product) => ({
+    ...product,
+    current_price: priceByProduct.get(product.id) ?? null,
+  }))
 
   // Out-of-stock products (current_price null — no active batch with remaining
   // stock) are still shown, not hidden; the client sorts them to the bottom.
