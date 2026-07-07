@@ -4,7 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { planConsumption } from '@/lib/inventory'
 import { calculateOrderPricing } from '@/lib/calculations'
 import { getSettings } from '@/lib/settings'
-import { isStoreOpenNow } from '@/lib/store-hours'
+import { getSlotSettings, isStoreOpenNow, normalizeSlotIso } from '@/lib/slots'
 import { isAddressInDeliveryZone } from '@/lib/zones'
 import { sendMessage, sendNewOrderNotification } from '@/lib/telegram'
 import type { CartLineItem } from '@/types/index'
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null)
   const items = body?.items as CartLineItem[] | undefined
   const deliveryAddress = typeof body?.delivery_address === 'string' ? body.delivery_address.trim() : ''
-  const scheduledAt = typeof body?.scheduled_at === 'string' ? body.scheduled_at : null
+  const scheduledAt = typeof body?.scheduled_at === 'string' ? normalizeSlotIso(body.scheduled_at) : null
   const notes = typeof body?.notes === 'string' ? body.notes.trim() : null
   const qrSlug = typeof body?.qr_slug === 'string' ? body.qr_slug : null
   const confirmedCod = body?.confirmed_cod === true
@@ -53,8 +53,9 @@ export async function POST(request: NextRequest) {
   }
 
   const settings = await getSettings()
+  const slotSettings = await getSlotSettings()
 
-  if (!scheduledAt && !isStoreOpenNow(settings)) {
+  if (!scheduledAt && !isStoreOpenNow(slotSettings)) {
     return NextResponse.json(
       { error: 'Store is currently closed — please pick a scheduled time slot' },
       { status: 400 }
@@ -84,6 +85,25 @@ export async function POST(request: NextRequest) {
         },
         { status: 409 }
       )
+    }
+
+    // Anti-double-booking: re-verify the exact slot is still free right before
+    // insert. Not fully atomic without a DB-level constraint (see the partial
+    // unique index noted alongside this route), but this closes the window
+    // that would otherwise let two customers both land on the same slot.
+    if (scheduledAt) {
+      const { count } = await supabaseAdmin
+        .from('orders')
+        .select('id', { count: 'exact', head: true })
+        .eq('scheduled_at', scheduledAt)
+        .not('status', 'eq', 'cancelled')
+
+      if (count && count > 0) {
+        return NextResponse.json(
+          { error: 'That time slot was just taken — please pick another.' },
+          { status: 409 }
+        )
+      }
     }
 
     const pricing = calculateOrderPricing(plan.subtotal, settings)

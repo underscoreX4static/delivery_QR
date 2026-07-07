@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Category, Product } from '@/types/index'
 import type { useCart } from '@/components/client/useCart'
+import { StoreStatusBanner } from '@/components/client/StoreStatusBanner'
 
 export interface CatalogueProduct extends Product {
   current_price: number | null
@@ -123,6 +124,8 @@ export function Catalogue({
           📦 My orders
         </button>
       </header>
+
+      <StoreStatusBanner />
 
       <div className="sticky top-[60px] z-10 bg-neutral-50/95 px-4 pb-2 backdrop-blur">
         <input

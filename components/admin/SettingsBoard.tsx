@@ -2,10 +2,16 @@
 
 import { useEffect, useState } from 'react'
 
+interface DayHours {
+  open: number
+  close: number
+}
+
+type WeekHours = Record<number, DayHours>
+
 interface StoreSettings {
-  openTime: string
-  closeTime: string
-  isManuallyClosed: boolean
+  weekHours: WeekHours
+  forceStatus: 'open' | 'closed' | null
   deliveryFee: number
   freeDeliveryThreshold: number
   discountThreshold: number
@@ -14,6 +20,8 @@ interface StoreSettings {
   discountRate2: number
   reorderDaysDefault: number
 }
+
+const DAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
 export function SettingsBoard() {
   const [settings, setSettings] = useState<StoreSettings | null>(null)
@@ -29,6 +37,10 @@ export function SettingsBoard() {
 
   const update = <K extends keyof StoreSettings>(key: K, value: StoreSettings[K]) => {
     setSettings({ ...settings, [key]: value })
+  }
+
+  const updateDay = (day: number, field: keyof DayHours, value: number) => {
+    setSettings({ ...settings, weekHours: { ...settings.weekHours, [day]: { ...settings.weekHours[day], [field]: value } } })
   }
 
   const save = async () => {
@@ -50,28 +62,48 @@ export function SettingsBoard() {
   return (
     <div className="flex flex-col gap-4">
       <div className="rounded-xl border border-neutral-200 bg-white p-4">
-        <h2 className="mb-3 text-sm font-semibold">Store hours</h2>
-        <div className="flex flex-wrap items-end gap-3">
-          <Field label="Open time (HH:mm)">
-            <input value={settings.openTime} onChange={(e) => update('openTime', e.target.value)} className="w-24 rounded border border-neutral-300 px-2 py-1 text-xs" />
-          </Field>
-          <Field label="Close time (HH:mm, 24:00 = midnight)">
-            <input value={settings.closeTime} onChange={(e) => update('closeTime', e.target.value)} className="w-24 rounded border border-neutral-300 px-2 py-1 text-xs" />
-          </Field>
+        <h2 className="mb-3 text-sm font-semibold">Store hours (per day)</h2>
+        <div className="flex flex-col gap-2">
+          {DAY_LABELS.map((label, day) => (
+            <div key={day} className="flex items-center gap-2 text-xs">
+              <span className="w-24 text-neutral-600">{label}</span>
+              <input
+                type="number"
+                min={0}
+                max={24}
+                value={settings.weekHours[day]?.open ?? 10}
+                onChange={(e) => updateDay(day, 'open', Number(e.target.value))}
+                className="w-16 rounded border border-neutral-300 px-2 py-1"
+              />
+              <span className="text-neutral-600">to</span>
+              <input
+                type="number"
+                min={0}
+                max={24}
+                value={settings.weekHours[day]?.close ?? 24}
+                onChange={(e) => updateDay(day, 'close', Number(e.target.value))}
+                className="w-16 rounded border border-neutral-300 px-2 py-1"
+              />
+              <span className="text-neutral-600">(24h, 24 = midnight)</span>
+            </div>
+          ))}
         </div>
 
         <div className="mt-4 flex flex-col gap-2">
-          <label className="flex items-center gap-2 text-xs font-medium">
-            <input
-              type="checkbox"
-              checked={settings.isManuallyClosed}
-              onChange={(e) => update('isManuallyClosed', e.target.checked)}
-            />
-            Manually closed (overrides store hours immediately)
-          </label>
+          <Field label="Manual override">
+            <select
+              value={settings.forceStatus ?? ''}
+              onChange={(e) => update('forceStatus', (e.target.value || null) as StoreSettings['forceStatus'])}
+              className="w-40 rounded border border-neutral-300 px-2 py-1 text-xs"
+            >
+              <option value="">Auto (use hours above)</option>
+              <option value="open">Force open</option>
+              <option value="closed">Force closed</option>
+            </select>
+          </Field>
           <label className="flex items-center gap-2 text-xs text-neutral-600">
             <input type="checkbox" checked={broadcast} onChange={(e) => setBroadcast(e.target.checked)} />
-            Notify all customers via Telegram when this changes
+            Notify all customers via Telegram when the override changes
           </label>
         </div>
       </div>

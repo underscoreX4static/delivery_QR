@@ -1,17 +1,14 @@
 import { supabaseAdmin } from '@/lib/supabase'
 import type { PricingSettings } from '@/lib/calculations'
 
+// Store hours / manual open-closed override live in lib/slots.ts's
+// getSlotSettings() (per-weekday hours + force-open/closed) — this file
+// only owns pricing and inventory-intelligence settings.
 export interface StoreSettings extends PricingSettings {
-  openTime: string // "HH:mm" in UTC+10
-  closeTime: string // "HH:mm" in UTC+10, "24:00" means midnight
-  isManuallyClosed: boolean
   reorderDaysDefault: number
 }
 
 const DEFAULTS: StoreSettings = {
-  openTime: '10:00',
-  closeTime: '24:00',
-  isManuallyClosed: false,
   deliveryFee: 10,
   freeDeliveryThreshold: 100,
   discountThreshold: 175,
@@ -28,9 +25,6 @@ export async function getSettings(): Promise<StoreSettings> {
   const map = Object.fromEntries(data.map((row) => [row.key, row.value]))
 
   return {
-    openTime: map.open_time ?? DEFAULTS.openTime,
-    closeTime: map.close_time ?? DEFAULTS.closeTime,
-    isManuallyClosed: map.is_manually_closed === 'true',
     deliveryFee: Number(map.delivery_fee ?? DEFAULTS.deliveryFee),
     freeDeliveryThreshold: Number(map.free_delivery_threshold ?? DEFAULTS.freeDeliveryThreshold),
     discountThreshold: Number(map.discount_threshold ?? DEFAULTS.discountThreshold),

@@ -26,9 +26,27 @@ interface Thresholds {
   discount_rate_2: number
 }
 
+interface Slot {
+  label: string
+  value: string
+  localHour: number
+  localMin: number
+  dayOffset: 0 | 1
+  taken: boolean
+}
+
 interface StoreStatus {
   is_open: boolean
-  slots: { label: string; value: string }[]
+  next_open: string | null
+  slots: Slot[]
+}
+
+const SCHEDULE_POLL_MS = 15_000
+
+function formatSlotTime(hour: number, min: number): string {
+  const period = hour >= 12 ? 'PM' : 'AM'
+  const h12 = hour % 12 === 0 ? 12 : hour % 12
+  return `${h12}:${min.toString().padStart(2, '0')} ${period}`
 }
 
 interface CheckoutDraft {
@@ -83,6 +101,7 @@ export function CartView({
   const [step, setStep] = useState<Step>('cart')
   const [street, setStreet] = useState(draft?.street ?? user.default_address ?? '')
   const [suburb, setSuburb] = useState(draft?.suburb ?? '')
+  const [scheduleType, setScheduleType] = useState<'asap' | 'scheduled'>(draft?.scheduledAt ? 'scheduled' : 'asap')
   const [scheduledAt, setScheduledAt] = useState<string | null>(draft?.scheduledAt ?? null)
   const [codConfirmed, setCodConfirmed] = useState(draft?.codConfirmed ?? false)
   const [thresholds, setThresholds] = useState<Thresholds | null>(null)
@@ -97,16 +116,55 @@ export function CartView({
     window.localStorage.setItem(key, JSON.stringify(payload))
   }, [key, street, suburb, scheduledAt, codConfirmed])
 
+  // Pricing thresholds only need to be known once, for the cart step's
+  // progress bars — the live-polling below is specifically for slot
+  // availability while the user is actually on the schedule step.
   useEffect(() => {
     apiFetch('/api/client/store-status')
       .then((r) => r.json())
-      .then((data) => {
-        setThresholds(data)
-        setStoreStatus(data)
-        if (!data.is_open && data.slots.length > 0 && scheduledAt === null) setScheduledAt(data.slots[0].value)
-      })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+      .then(setThresholds)
   }, [apiFetch])
+
+  // Slot availability can change while the customer is deciding (another
+  // customer books the same slot), so this polls live — but only while this
+  // step is actually visible; cleaned up the moment they navigate away.
+  // Cache-bust query param backs up the no-store server headers, since
+  // Telegram/Safari WebViews cache GETs aggressively regardless.
+  useEffect(() => {
+    if (step !== 'schedule') return
+
+    let cancelled = false
+    const poll = async () => {
+      const res = await apiFetch(`/api/client/store-status?t=${Date.now()}`)
+      const data: StoreStatus = await res.json()
+      if (cancelled) return
+      setStoreStatus(data)
+      setScheduleType((prev) => (!data.is_open && prev === 'asap' ? 'scheduled' : prev))
+    }
+    poll()
+    const interval = setInterval(poll, SCHEDULE_POLL_MS)
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') poll()
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [step, apiFetch])
+
+  // Re-resolve a slot saved from a previous session against the freshly
+  // fetched list: if it no longer exists or is now taken, drop it silently —
+  // never a blocking error, just back to "no slot selected".
+  useEffect(() => {
+    if (!storeStatus || scheduledAt === null) return
+    const match = storeStatus.slots.find((s) => s.value === scheduledAt)
+    if (!match || match.taken) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- drop an invalidated saved slot, not a render loop
+      setScheduledAt(null)
+    }
+  }, [storeStatus, scheduledAt])
 
   useEffect(() => {
     if (step === 'review' && !preview) {
@@ -275,25 +333,62 @@ export function CartView({
             <p className="text-sm text-neutral-600">Loading store hours…</p>
           ) : (
             <>
-              {storeStatus.is_open ? (
-                <label className="flex items-center gap-2 rounded-xl border border-neutral-200 bg-white p-3">
-                  <input type="radio" checked={scheduledAt === null} onChange={() => setScheduledAt(null)} />
-                  <span className="text-sm font-medium">ASAP</span>
-                </label>
-              ) : (
+              {!storeStatus.is_open && (
                 <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800">
-                  We&apos;re currently closed — pick a time slot for our next opening.
+                  We&apos;re currently closed{storeStatus.next_open ? ` — opens ${storeStatus.next_open}` : ''}. Pick a
+                  time slot below.
                 </p>
               )}
-              <div className="flex flex-col gap-2">
-                {storeStatus.slots.map((slot) => (
-                  <label key={slot.value} className="flex items-center gap-2 rounded-xl border border-neutral-200 bg-white p-3">
-                    <input type="radio" checked={scheduledAt === slot.value} onChange={() => setScheduledAt(slot.value)} />
-                    <span className="text-sm font-medium">{slot.label}</span>
-                  </label>
-                ))}
+
+              <div className="flex gap-2">
+                {storeStatus.is_open && (
+                  <button
+                    onClick={() => {
+                      setScheduleType('asap')
+                      setScheduledAt(null)
+                    }}
+                    className={`flex-1 rounded-xl border p-3 text-left ${
+                      scheduleType === 'asap' ? 'border-black bg-black text-white' : 'border-neutral-200 bg-white'
+                    }`}
+                  >
+                    <span className="text-sm font-medium">ASAP</span>
+                  </button>
+                )}
+                <button
+                  onClick={() => setScheduleType('scheduled')}
+                  className={`flex-1 rounded-xl border p-3 text-left ${
+                    scheduleType === 'scheduled' ? 'border-black bg-black text-white' : 'border-neutral-200 bg-white'
+                  }`}
+                >
+                  <span className="text-sm font-medium">Schedule for later</span>
+                </button>
               </div>
-              <button onClick={goNext} className="mt-auto rounded-xl bg-black py-3 text-center font-medium text-white">
+
+              {scheduleType === 'scheduled' && (
+                <div className="flex flex-col gap-3">
+                  <SlotGroup
+                    title="Today"
+                    slots={storeStatus.slots.filter((s) => s.dayOffset === 0)}
+                    selected={scheduledAt}
+                    onSelect={setScheduledAt}
+                  />
+                  <SlotGroup
+                    title="Tomorrow"
+                    slots={storeStatus.slots.filter((s) => s.dayOffset === 1)}
+                    selected={scheduledAt}
+                    onSelect={setScheduledAt}
+                  />
+                  {storeStatus.slots.length === 0 && (
+                    <p className="text-sm text-neutral-600">No slots available right now.</p>
+                  )}
+                </div>
+              )}
+
+              <button
+                onClick={goNext}
+                disabled={scheduleType === 'scheduled' && scheduledAt === null}
+                className="mt-auto rounded-xl bg-black py-3 text-center font-medium text-white disabled:opacity-50"
+              >
                 Continue
               </button>
             </>
@@ -379,6 +474,45 @@ export function CartView({
           )}
         </div>
       )}
+    </div>
+  )
+}
+
+function SlotGroup({
+  title,
+  slots,
+  selected,
+  onSelect,
+}: {
+  title: string
+  slots: Slot[]
+  selected: string | null
+  onSelect: (value: string) => void
+}) {
+  if (slots.length === 0) return null
+
+  return (
+    <div>
+      <p className="mb-1.5 text-xs font-medium text-neutral-600">{title}</p>
+      <div className="grid grid-cols-3 gap-2">
+        {slots.map((slot) => (
+          <button
+            key={slot.value}
+            disabled={slot.taken}
+            onClick={() => onSelect(slot.value)}
+            className={`rounded-lg py-2 text-xs font-medium ${
+              slot.taken
+                ? 'cursor-not-allowed bg-neutral-100 text-neutral-400'
+                : selected === slot.value
+                  ? 'bg-black text-white'
+                  : 'border border-neutral-300 bg-white text-neutral-900'
+            }`}
+          >
+            {formatSlotTime(slot.localHour, slot.localMin)}
+            {slot.taken ? ' · full' : ''}
+          </button>
+        ))}
+      </div>
     </div>
   )
 }
