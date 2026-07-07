@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { advanceStatus, assignDriver, cancelOrder, confirmOrder, getOrder, markDelivered } from '@/lib/orders'
-import { driverActionButtons, sendMessage } from '@/lib/telegram'
+import { driverActionButtons, sendMessage, sendOnTheWayNotifications } from '@/lib/telegram'
 
 type ActionBody =
   | { action: 'confirm' }
@@ -49,7 +49,14 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
         const result = await advanceStatus(orderId, body.status, changedBy)
         if (!result.ok) return NextResponse.json({ error: result.error }, { status: 409 })
         if (body.status === 'on_the_way') {
-          await notifyCustomer(orderId, `🚗 Your order #${orderId.slice(0, 8)} is on the way!`)
+          const { data: order } = await supabaseAdmin
+            .from('orders')
+            .select('users(telegram_id), drivers(telegram_id)')
+            .eq('id', orderId)
+            .single()
+          const customerTelegramId = (order?.users as unknown as { telegram_id: string } | null)?.telegram_id ?? null
+          const driverTelegramId = (order?.drivers as unknown as { telegram_id: string } | null)?.telegram_id ?? null
+          await sendOnTheWayNotifications(customerTelegramId, driverTelegramId, orderId)
         }
         break
       }

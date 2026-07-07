@@ -1,6 +1,6 @@
 import type { CallbackQuery, Message } from 'node-telegram-bot-api'
 import { supabaseAdmin } from '@/lib/supabase'
-import { answerCallbackQuery, driverActionButtons, OWNER_TELEGRAM_ID, sendMessage } from '@/lib/telegram'
+import { answerCallbackQuery, driverActionButtons, OWNER_TELEGRAM_ID, sendMessage, sendOnTheWayNotifications } from '@/lib/telegram'
 import {
   advanceStatus,
   assignDriver,
@@ -20,6 +20,7 @@ type Action =
   | 'self_handle'
   | 'on_the_way'
   | 'eta'
+  | 'eta_custom'
   | 'delivered'
   | 'cancel_order'
   | 'settle_confirm'
@@ -55,6 +56,9 @@ export async function handleCallbackQuery(query: CallbackQuery) {
     case 'eta':
       await handleEta(query, orderId, extra ?? '', fromTelegramId)
       break
+    case 'eta_custom':
+      await startCustomEtaFlow(query, orderId, fromTelegramId)
+      break
     case 'delivered':
       await delivered(query, orderId, fromTelegramId)
       break
@@ -79,9 +83,10 @@ export async function handleCallbackQuery(query: CallbackQuery) {
 }
 
 /**
- * Cancellation reasons are captured via Telegram's force-reply: startCancelFlow
- * sends a force-reply prompt with the order id embedded in its text, and this
- * handler recovers the order id from `reply_to_message.text` — no server-side
+ * Cancellation reasons and custom ETAs are both captured via Telegram's
+ * force-reply: the two start*Flow functions below each send a force-reply
+ * prompt with a distinct marker + the order id embedded in its text, and
+ * this handler recovers both from `reply_to_message.text` — no server-side
  * state needed between the two messages.
  */
 export async function handleReplyMessage(message: Message) {
@@ -91,13 +96,18 @@ export async function handleReplyMessage(message: Message) {
 
   const orderId = match[1]
   const fromTelegramId = String(message.from!.id)
-  const reason = message.text?.trim()
-  if (!reason) return
+  const reply = message.text?.trim()
+  if (!reply) return
+
+  if (promptText.startsWith('Please reply with the exact ETA')) {
+    await handleCustomEtaReply(orderId, reply, fromTelegramId)
+    return
+  }
 
   const order = await getOrderWithRelations(orderId)
   if (!order || !isAuthorizedForOrder(order, fromTelegramId)) return
 
-  const result = await cancelOrderTransition(orderId, reason, fromTelegramId)
+  const result = await cancelOrderTransition(orderId, reply, fromTelegramId)
   if (!result.ok) {
     await sendMessage(fromTelegramId, `Could not cancel: ${result.error}`)
     return
@@ -105,11 +115,31 @@ export async function handleReplyMessage(message: Message) {
 
   await sendMessage(fromTelegramId, `Order #${orderId.slice(0, 8)} cancelled.`)
   if (order.users?.telegram_id) {
-    await sendMessage(order.users.telegram_id, `❌ Your order #${orderId.slice(0, 8)} was cancelled: ${reason}`)
+    await sendMessage(order.users.telegram_id, `❌ Your order #${orderId.slice(0, 8)} was cancelled: ${reply}`)
   }
   if (order.drivers?.telegram_id && order.drivers.telegram_id !== fromTelegramId) {
-    await sendMessage(order.drivers.telegram_id, `❌ Order #${orderId.slice(0, 8)} was cancelled: ${reason}`)
+    await sendMessage(order.drivers.telegram_id, `❌ Order #${orderId.slice(0, 8)} was cancelled: ${reply}`)
   }
+}
+
+async function handleCustomEtaReply(orderId: string, reply: string, fromTelegramId: string) {
+  const order = await getOrderWithRelations(orderId)
+  if (!order || !isAuthorizedForOrder(order, fromTelegramId)) return
+
+  const minutes = Number(reply.replace(/\D/g, ''))
+  if (!Number.isFinite(minutes) || minutes <= 0) {
+    await sendMessage(fromTelegramId, 'Please reply with just a number, e.g. "12".')
+    return
+  }
+
+  if (order.users?.telegram_id) {
+    await sendMessage(
+      order.users.telegram_id,
+      `🚗 Your driver is on the way!\n⏱️ Estimated arrival: ~${minutes} minutes\n💵 Please have $${order.total.toFixed(2)} cash ready!`
+    )
+  }
+
+  await sendMessage(fromTelegramId, `Customer notified — ETA ${minutes} min`)
 }
 
 async function requireOwner(query: CallbackQuery, fromTelegramId: string): Promise<boolean> {
@@ -203,25 +233,19 @@ async function onTheWay(query: CallbackQuery, orderId: string, fromTelegramId: s
   }
 
   await answerCallbackQuery(query.id, 'Marked on the way')
+  await sendOnTheWayNotifications(order.users?.telegram_id ?? null, fromTelegramId, orderId)
+}
 
-  if (order.users?.telegram_id) {
-    await sendMessage(
-      order.users.telegram_id,
-      `🚗 Your driver is on the way!\nThey'll confirm the ETA shortly.`
-    )
+async function startCustomEtaFlow(query: CallbackQuery, orderId: string, fromTelegramId: string) {
+  const order = await getOrderWithRelations(orderId)
+  if (!order || !isAuthorizedForOrder(order, fromTelegramId)) {
+    await answerCallbackQuery(query.id, 'Only the assigned driver or owner can do that.')
+    return
   }
 
-  await sendMessage(fromTelegramId, '⏱️ How many minutes until delivery?', {
-    reply_markup: {
-      inline_keyboard: [
-        [
-          { text: '10 min', callback_data: `eta:${orderId}:10` },
-          { text: '15 min', callback_data: `eta:${orderId}:15` },
-          { text: '20 min', callback_data: `eta:${orderId}:20` },
-          { text: '30 min', callback_data: `eta:${orderId}:30` },
-        ],
-      ],
-    },
+  await answerCallbackQuery(query.id)
+  await sendMessage(fromTelegramId, `Please reply with the exact ETA in minutes for order ${orderId}.`, {
+    reply_markup: { force_reply: true },
   })
 }
 

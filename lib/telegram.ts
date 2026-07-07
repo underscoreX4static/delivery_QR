@@ -137,6 +137,37 @@ export async function sendNewOrderNotification(orderId: string, summary: string)
 }
 
 /**
+ * Shared by both the Telegram bot's "On the way" button and the admin
+ * dashboard's "Mark on the way" action, so the driver always gets asked for
+ * an ETA regardless of which surface triggered the status change.
+ */
+export async function sendOnTheWayNotifications(
+  customerTelegramId: string | null,
+  driverTelegramId: string | null,
+  orderId: string
+) {
+  if (customerTelegramId) {
+    await sendMessage(customerTelegramId, `🚗 Your driver is on the way!\nThey'll confirm the ETA shortly.`)
+  }
+
+  if (driverTelegramId) {
+    await sendMessage(driverTelegramId, '⏱️ How many minutes until delivery?', {
+      reply_markup: {
+        inline_keyboard: [
+          [
+            { text: '10 min', callback_data: `eta:${orderId}:10` },
+            { text: '15 min', callback_data: `eta:${orderId}:15` },
+            { text: '20 min', callback_data: `eta:${orderId}:20` },
+            { text: '30 min', callback_data: `eta:${orderId}:30` },
+          ],
+          [{ text: 'Custom…', callback_data: `eta_custom:${orderId}` }],
+        ],
+      },
+    })
+  }
+}
+
+/**
  * Validates the `initData` string passed by the Telegram Mini App client per
  * https://core.telegram.org/bots/webapps#validating-data-received-via-the-mini-app
  * Returns the parsed user info if the signature checks out, otherwise null.
