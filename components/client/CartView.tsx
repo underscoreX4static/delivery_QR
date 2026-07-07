@@ -86,6 +86,7 @@ export function CartView({
   cart,
   onBack,
   onOrderPlaced,
+  onViewOrders,
 }: {
   user: User
   qrSlug: string | null
@@ -93,6 +94,7 @@ export function CartView({
   cart: ReturnType<typeof useCart>
   onBack: () => void
   onOrderPlaced: (orderId: string) => void
+  onViewOrders: () => void
 }) {
   const { apiFetch } = useTelegram()
   const key = draftKey(user.telegram_id, qrSlug)
@@ -109,6 +111,7 @@ export function CartView({
   const [preview, setPreview] = useState<CartPreview | null>(null)
   const [placing, setPlacing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [orderCapReached, setOrderCapReached] = useState(false)
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -201,6 +204,7 @@ export function CartView({
   const placeOrder = async (items: CartLineItem[]) => {
     setPlacing(true)
     setError(null)
+    setOrderCapReached(false)
     try {
       const res = await apiFetch('/api/orders', {
         method: 'POST',
@@ -213,7 +217,10 @@ export function CartView({
         }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? 'Failed to place order')
+      if (!res.ok) {
+        if (res.status === 429) setOrderCapReached(true)
+        throw new Error(data.error ?? 'Failed to place order')
+      }
       window.localStorage.removeItem(key)
       onOrderPlaced(data.order.id)
     } catch (err) {
@@ -463,13 +470,22 @@ export function CartView({
 
               {error && <p className="text-sm text-red-600">{error}</p>}
 
-              <button
-                disabled={placing}
-                onClick={() => placeOrder(cart.items)}
-                className="mt-auto rounded-xl bg-black py-3 text-center font-medium text-white disabled:opacity-50"
-              >
-                {placing ? 'Placing order…' : 'Confirm order'}
-              </button>
+              {orderCapReached ? (
+                <button
+                  onClick={onViewOrders}
+                  className="mt-auto rounded-xl bg-black py-3 text-center font-medium text-white"
+                >
+                  View my orders
+                </button>
+              ) : (
+                <button
+                  disabled={placing}
+                  onClick={() => placeOrder(cart.items)}
+                  className="mt-auto rounded-xl bg-black py-3 text-center font-medium text-white disabled:opacity-50"
+                >
+                  {placing ? 'Placing order…' : 'Confirm order'}
+                </button>
+              )}
             </>
           )}
         </div>

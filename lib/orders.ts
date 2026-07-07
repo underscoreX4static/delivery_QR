@@ -1,5 +1,8 @@
 import { supabaseAdmin } from '@/lib/supabase'
 import { commitConsumption, refundConsumption } from '@/lib/inventory'
+import { calculateBonusPoolContribution, calculatePayout } from '@/lib/calculations'
+import { getSettings } from '@/lib/settings'
+import { contributeToBonusPool, checkAndAwardMilestones } from '@/lib/partner-bonuses'
 import { notifyOwner } from '@/lib/telegram'
 import type { Order, OrderItem, OrderStatus } from '@/types/index'
 
@@ -125,6 +128,38 @@ export async function markDelivered(orderId: string, changedBy: string): Promise
           commission_rate: partner.commission_rate,
           commission_amount: commissionAmount,
         })
+
+        // Bonus pool + milestone check — only meaningful for partner-
+        // attributed orders, since the pool is funded from the owner's net
+        // profit on exactly the orders that partner generated.
+        try {
+          const [items, settings, driver] = await Promise.all([
+            getOrderItems(orderId),
+            getSettings(),
+            order.driver_id
+              ? supabaseAdmin.from('drivers').select('is_owner').eq('id', order.driver_id).single()
+              : Promise.resolve({ data: null }),
+          ])
+          const costOfGoods = items.reduce((sum, i) => sum + i.unit_cost_price * i.quantity, 0)
+
+          const payout = calculatePayout({
+            subtotal: order.subtotal,
+            deliveryFee: order.delivery_fee,
+            discount: order.discount,
+            total: order.total,
+            costOfGoods,
+            driverIsOwner: driver.data?.is_owner ?? false,
+            partnerCommissionRate: partner.commission_rate,
+            affiliateCommissionOverride: commissionAmount,
+          })
+
+          const contribution = calculateBonusPoolContribution(payout.ownerNet, settings.bonusPoolRate)
+          await contributeToBonusPool(qrCode.partner_id, contribution)
+          await checkAndAwardMilestones(qrCode.partner_id)
+        } catch (err) {
+          console.error(`Bonus pool update failed for order ${orderId}:`, err)
+          await notifyOwner(`⚠️ Order #${orderId.slice(0, 8)} delivered but its bonus pool update failed — check manually.`).catch(() => {})
+        }
       }
     }
   }

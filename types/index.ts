@@ -26,6 +26,18 @@ export interface Partner {
   created_at: string
   /** Requires migration: alter table partners add column if not exists telegram_id text; */
   telegram_id?: string | null
+  /** Requires migration: alter table partners add column if not exists bonus_pool_balance decimal(10,2) not null default 0; */
+  bonus_pool_balance?: number
+}
+
+export interface PartnerBonus {
+  id: string
+  partner_id: string
+  milestone_orders: number
+  bonus_amount: number
+  paid_out: boolean
+  paid_out_at: string | null
+  created_at: string
 }
 
 export interface QrCode {

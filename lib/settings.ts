@@ -6,6 +6,8 @@ import type { PricingSettings } from '@/lib/calculations'
 // only owns pricing and inventory-intelligence settings.
 export interface StoreSettings extends PricingSettings {
   reorderDaysDefault: number
+  /** Share of the owner's net profit per partner-attributed order that funds that partner's bonus pool. */
+  bonusPoolRate: number
 }
 
 const DEFAULTS: StoreSettings = {
@@ -16,6 +18,7 @@ const DEFAULTS: StoreSettings = {
   discountThreshold2: 250,
   discountRate2: 0.15,
   reorderDaysDefault: 7,
+  bonusPoolRate: 0.1,
 }
 
 export async function getSettings(): Promise<StoreSettings> {
@@ -32,6 +35,7 @@ export async function getSettings(): Promise<StoreSettings> {
     discountThreshold2: Number(map.discount_threshold_2 ?? DEFAULTS.discountThreshold2),
     discountRate2: Number(map.discount_rate_2 ?? DEFAULTS.discountRate2),
     reorderDaysDefault: Number(map.reorder_days_default ?? DEFAULTS.reorderDaysDefault),
+    bonusPoolRate: Number(map.bonus_pool_rate ?? DEFAULTS.bonusPoolRate),
   }
 }
 

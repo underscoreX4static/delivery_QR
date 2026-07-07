@@ -107,6 +107,34 @@ export function suggestSellPrice(costPrice: number, targetMargin: number): numbe
   return round2(costPrice / (1 - targetMargin))
 }
 
+/**
+ * Uber-style loyalty milestones for commercials, keyed by lifetime delivered
+ * order count attributed to that partner's QR codes. Each threshold is
+ * awarded at most once per partner. Fixed reward amounts rather than a
+ * percentage of the pool balance — deliberately a separate concern from
+ * calculateBonusPoolContribution below (the pool is what the owner has set
+ * aside toward these obligations, not what determines the reward itself).
+ * Placeholder amounts — tune once real figures are decided.
+ */
+export const COMMERCIAL_BONUS_MILESTONES: { orders: number; bonus: number }[] = [
+  { orders: 5, bonus: 20 },
+  { orders: 25, bonus: 50 },
+  { orders: 50, bonus: 100 },
+  { orders: 100, bonus: 200 },
+  { orders: 250, bonus: 500 },
+]
+
+/**
+ * Portion of the owner's net (post-commission) profit on a single delivered,
+ * partner-attributed order that gets set aside into that partner's bonus
+ * pool. Driver payout and the partner's own per-order commission are
+ * untouched — this only reduces what the owner keeps, in exchange for
+ * funding the milestone bonuses above.
+ */
+export function calculateBonusPoolContribution(ownerNet: number, bonusPoolRate: number): number {
+  return round2(ownerNet * bonusPoolRate)
+}
+
 function round2(n: number): number {
   return Math.round((n + Number.EPSILON) * 100) / 100
 }

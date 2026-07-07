@@ -143,6 +143,10 @@ export function driverActionButtons(orderId: string, deliveryAddress?: string): 
   }
 }
 
+export function arrivedButton(orderId: string): InlineKeyboardMarkup {
+  return { inline_keyboard: [[{ text: '📍 I’ve arrived', callback_data: `driver_arrived:${orderId}` }]] }
+}
+
 export async function sendNewOrderNotification(orderId: string, summary: string) {
   await notifyOwner(`🆕 New order #${orderId.slice(0, 8)}\n\n${summary}`, orderActionButtons(orderId))
 }

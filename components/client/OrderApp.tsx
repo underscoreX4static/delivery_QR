@@ -105,6 +105,7 @@ export function OrderApp({ qrSlugFromUrl }: { qrSlugFromUrl: string | null }) {
           setConfirmedOrderId(orderId)
           setView('confirmation')
         }}
+        onViewOrders={() => setView('orders')}
       />
     )
   }

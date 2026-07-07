@@ -1,6 +1,13 @@
 import type { CallbackQuery, Message } from 'node-telegram-bot-api'
 import { supabaseAdmin } from '@/lib/supabase'
-import { answerCallbackQuery, driverActionButtons, OWNER_TELEGRAM_ID, sendMessage, sendOnTheWayNotifications } from '@/lib/telegram'
+import {
+  answerCallbackQuery,
+  arrivedButton,
+  driverActionButtons,
+  OWNER_TELEGRAM_ID,
+  sendMessage,
+  sendOnTheWayNotifications,
+} from '@/lib/telegram'
 import {
   advanceStatus,
   assignDriver,
@@ -22,6 +29,7 @@ type Action =
   | 'on_the_way'
   | 'eta'
   | 'eta_custom'
+  | 'driver_arrived'
   | 'delivered'
   | 'cancel_order'
   | 'settle_confirm'
@@ -59,6 +67,9 @@ export async function handleCallbackQuery(query: CallbackQuery) {
       break
     case 'eta_custom':
       await startCustomEtaFlow(query, orderId, fromTelegramId)
+      break
+    case 'driver_arrived':
+      await driverArrived(query, orderId, fromTelegramId)
       break
     case 'delivered':
       await delivered(query, orderId, fromTelegramId)
@@ -140,7 +151,9 @@ async function handleCustomEtaReply(orderId: string, reply: string, fromTelegram
     )
   }
 
-  await sendMessage(fromTelegramId, `Customer notified — ETA ${minutes} min`)
+  await sendMessage(fromTelegramId, `Customer notified — ETA ${minutes} min. Tap below once you're at the door:`, {
+    reply_markup: arrivedButton(orderId),
+  })
 }
 
 async function requireOwner(query: CallbackQuery, fromTelegramId: string): Promise<boolean> {
@@ -265,6 +278,21 @@ async function handleEta(query: CallbackQuery, orderId: string, minutes: string,
   }
 
   await answerCallbackQuery(query.id, `Customer notified — ETA ${minutes} min`)
+  await sendMessage(fromTelegramId, `Tap below once you're at the door:`, { reply_markup: arrivedButton(orderId) })
+}
+
+async function driverArrived(query: CallbackQuery, orderId: string, fromTelegramId: string) {
+  const order = await getOrderWithRelations(orderId)
+  if (!order || !isAuthorizedForOrder(order, fromTelegramId)) {
+    await answerCallbackQuery(query.id, 'Only the assigned driver or owner can do that.')
+    return
+  }
+
+  await answerCallbackQuery(query.id, 'Customer notified')
+
+  if (order.users?.telegram_id) {
+    await sendMessage(order.users.telegram_id, `🔔 Your driver has arrived! 📍`)
+  }
 }
 
 async function delivered(query: CallbackQuery, orderId: string, fromTelegramId: string) {
