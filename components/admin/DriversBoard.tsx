@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import type { Driver } from '@/types/index'
 
 interface AdminDriver extends Driver {
@@ -112,11 +113,18 @@ export function DriversBoard() {
             </div>
             <p className="mt-1 text-xs text-neutral-600">{d.telegram_id}</p>
             <p className="text-xs text-neutral-600">{d.active_orders} active orders</p>
-            {!d.is_owner && (
-              <button onClick={() => toggleActive(d)} className="mt-2 w-full rounded-lg bg-neutral-100 py-2 text-xs font-medium text-neutral-700">
-                {d.is_active ? 'Deactivate' : 'Activate'}
-              </button>
-            )}
+            <div className="mt-2 flex gap-2">
+              {!d.is_owner && (
+                <Link href={`/admin/drivers/${d.id}`} className="flex-1 rounded-lg bg-neutral-900 py-2 text-center text-xs font-medium text-white">
+                  View bonuses →
+                </Link>
+              )}
+              {!d.is_owner && (
+                <button onClick={() => toggleActive(d)} className="flex-1 rounded-lg bg-neutral-100 py-2 text-xs font-medium text-neutral-700">
+                  {d.is_active ? 'Deactivate' : 'Activate'}
+                </button>
+              )}
+            </div>
           </div>
         ))}
         {drivers.length === 0 && <p className="text-sm text-neutral-600">No drivers yet.</p>}
@@ -145,6 +153,11 @@ export function DriversBoard() {
                 <td className="px-3 py-2">{d.active_orders}</td>
                 <td className="px-3 py-2">{d.is_active ? 'Yes' : 'No'}</td>
                 <td className="px-3 py-2">
+                  {!d.is_owner && (
+                    <Link href={`/admin/drivers/${d.id}`} className="mr-3 text-xs text-blue-600">
+                      View bonuses →
+                    </Link>
+                  )}
                   {!d.is_owner && (
                     <button onClick={() => toggleActive(d)} className="text-xs text-blue-600">
                       {d.is_active ? 'Deactivate' : 'Activate'}

@@ -168,6 +168,7 @@ function NewPartnerForm({ onCreated }: { onCreated: () => void }) {
   const [contactName, setContactName] = useState('')
   const [contactPhone, setContactPhone] = useState('')
   const [commissionPercent, setCommissionPercent] = useState('5')
+  const [firstSaleBonus, setFirstSaleBonus] = useState('10')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
@@ -184,6 +185,7 @@ function NewPartnerForm({ onCreated }: { onCreated: () => void }) {
           contact_name: contactName,
           contact_phone: contactPhone,
           commission_rate: Number(commissionPercent) / 100,
+          first_sale_bonus_amount: Number(firstSaleBonus),
         }),
       })
       const data = await res.json()
@@ -213,6 +215,12 @@ function NewPartnerForm({ onCreated }: { onCreated: () => void }) {
           value={commissionPercent}
           onChange={(e) => setCommissionPercent(e.target.value)}
           className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-base sm:w-24 sm:text-xs"
+        />
+        <input
+          placeholder="First-sale bonus $"
+          value={firstSaleBonus}
+          onChange={(e) => setFirstSaleBonus(e.target.value)}
+          className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-base sm:w-32 sm:text-xs"
         />
       </div>
       {error && <p className="mt-2 text-xs text-red-600">{error}</p>}

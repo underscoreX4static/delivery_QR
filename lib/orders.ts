@@ -2,8 +2,8 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { commitConsumption, refundConsumption } from '@/lib/inventory'
 import { calculateBonusPoolContribution, calculatePayout } from '@/lib/calculations'
 import { getSettings } from '@/lib/settings'
-import { contributeToBonusPool, checkAndAwardMilestones } from '@/lib/partner-bonuses'
-import { notifyOwner } from '@/lib/telegram'
+import { contributeToBonusPool, checkAndAwardMilestones } from '@/lib/driver-bonuses'
+import { notifyOwner, sendMessage } from '@/lib/telegram'
 import type { Order, OrderItem, OrderStatus } from '@/types/index'
 
 // Single home for order lifecycle transitions and their side effects (stock
@@ -94,9 +94,11 @@ export async function advanceStatus(
 
 /**
  * on_the_way -> delivered. Creates the affiliate commission snapshot if the
- * order came via a partner QR. Idempotent: a repeat call after the order is
- * already delivered is a no-op, so double-tapping "Delivered" can't insert
- * a duplicate affiliate_commissions row.
+ * order came via a partner QR (plus a one-time first-sale bonus notice for
+ * that commercial), and separately contributes to the assigned driver's
+ * milestone bonus pool. Idempotent: a repeat call after the order is already
+ * delivered is a no-op, so double-tapping "Delivered" can't insert a
+ * duplicate affiliate_commissions row or double-count a bonus contribution.
  */
 export async function markDelivered(orderId: string, changedBy: string): Promise<Result> {
   const order = await getOrder(orderId)
@@ -104,6 +106,8 @@ export async function markDelivered(orderId: string, changedBy: string): Promise
   if (order.status === 'delivered') return { ok: true } // already delivered — no-op
 
   await recordStatusChange(orderId, 'delivered', changedBy)
+
+  let commissionAmount = 0
 
   if (order.qr_code_id) {
     const { data: qrCode } = await supabaseAdmin
@@ -115,12 +119,20 @@ export async function markDelivered(orderId: string, changedBy: string): Promise
     if (qrCode?.partner_id) {
       const { data: partner } = await supabaseAdmin
         .from('partners')
-        .select('commission_rate')
+        .select('commission_rate, first_sale_bonus_amount')
         .eq('id', qrCode.partner_id)
         .single()
 
       if (partner) {
-        const commissionAmount = round2(order.total * partner.commission_rate)
+        commissionAmount = round2(order.total * partner.commission_rate)
+
+        // Checked before inserting this order's own commission row, so a
+        // count of 0 here means this delivery is genuinely their first.
+        const { count: priorCommissions } = await supabaseAdmin
+          .from('affiliate_commissions')
+          .select('id', { count: 'exact', head: true })
+          .eq('partner_id', qrCode.partner_id)
+
         await supabaseAdmin.from('affiliate_commissions').insert({
           partner_id: qrCode.partner_id,
           order_id: order.id,
@@ -129,42 +141,73 @@ export async function markDelivered(orderId: string, changedBy: string): Promise
           commission_amount: commissionAmount,
         })
 
-        // Bonus pool + milestone check — only meaningful for partner-
-        // attributed orders, since the pool is funded from the owner's net
-        // profit on exactly the orders that partner generated.
-        try {
-          const [items, settings, driver] = await Promise.all([
-            getOrderItems(orderId),
-            getSettings(),
-            order.driver_id
-              ? supabaseAdmin.from('drivers').select('is_owner').eq('id', order.driver_id).single()
-              : Promise.resolve({ data: null }),
-          ])
-          const costOfGoods = items.reduce((sum, i) => sum + i.unit_cost_price * i.quantity, 0)
-
-          const payout = calculatePayout({
-            subtotal: order.subtotal,
-            deliveryFee: order.delivery_fee,
-            discount: order.discount,
-            total: order.total,
-            costOfGoods,
-            driverIsOwner: driver.data?.is_owner ?? false,
-            partnerCommissionRate: partner.commission_rate,
-            affiliateCommissionOverride: commissionAmount,
+        if ((priorCommissions ?? 0) === 0) {
+          await notifyFirstSaleBonus(qrCode.partner_id, partner.first_sale_bonus_amount ?? 10).catch((err) => {
+            console.error(`First-sale bonus notification failed for order ${orderId}:`, err)
           })
-
-          const contribution = calculateBonusPoolContribution(payout.ownerNet, settings.bonusPoolRate)
-          await contributeToBonusPool(qrCode.partner_id, contribution)
-          await checkAndAwardMilestones(qrCode.partner_id)
-        } catch (err) {
-          console.error(`Bonus pool update failed for order ${orderId}:`, err)
-          await notifyOwner(`⚠️ Order #${orderId.slice(0, 8)} delivered but its bonus pool update failed — check manually.`).catch(() => {})
         }
       }
     }
   }
 
+  // Driver milestone bonus pool — independent of partner attribution, since
+  // the driver earns this for the delivery itself, not for who referred it.
+  if (order.driver_id) {
+    try {
+      const [items, settings, driver] = await Promise.all([
+        getOrderItems(orderId),
+        getSettings(),
+        supabaseAdmin.from('drivers').select('is_owner').eq('id', order.driver_id).single(),
+      ])
+
+      if (!driver.data?.is_owner) {
+        const costOfGoods = items.reduce((sum, i) => sum + i.unit_cost_price * i.quantity, 0)
+
+        const payout = calculatePayout({
+          subtotal: order.subtotal,
+          deliveryFee: order.delivery_fee,
+          discount: order.discount,
+          total: order.total,
+          costOfGoods,
+          driverIsOwner: false,
+          partnerCommissionRate: 0,
+          affiliateCommissionOverride: commissionAmount,
+        })
+
+        const contribution = calculateBonusPoolContribution(payout.ownerNet, settings.bonusPoolRate)
+        await contributeToBonusPool(order.driver_id, contribution)
+        await checkAndAwardMilestones(order.driver_id)
+      }
+    } catch (err) {
+      console.error(`Driver bonus pool update failed for order ${orderId}:`, err)
+      await notifyOwner(
+        `⚠️ Order #${orderId.slice(0, 8)} delivered but its driver bonus pool update failed — check manually.`
+      ).catch(() => {})
+    }
+  }
+
   return { ok: true }
+}
+
+async function notifyFirstSaleBonus(partnerId: string, amount: number): Promise<void> {
+  const { data: partner } = await supabaseAdmin
+    .from('partners')
+    .select('name, telegram_id')
+    .eq('id', partnerId)
+    .single()
+  if (!partner) return
+
+  await notifyOwner(
+    `🎉 ${partner.name}'s first referred sale was just delivered — $${amount.toFixed(2)} first-sale bonus owed.`
+  )
+
+  if (partner.telegram_id) {
+    await sendMessage(
+      partner.telegram_id,
+      `🎉 *Congrats on your first sale!*\n\nYou've earned a *$${amount.toFixed(2)} bonus* for bringing in your first customer 🥳\n\nHAZE will arrange payment shortly.`,
+      { parse_mode: 'Markdown' }
+    ).catch(() => {})
+  }
 }
 
 /**

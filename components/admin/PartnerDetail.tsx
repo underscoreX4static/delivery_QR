@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import type { Partner, PartnerBonus } from '@/types/index'
+import type { Partner } from '@/types/index'
 
 interface Stats {
   total_scans: number
@@ -33,11 +33,10 @@ interface CustomerRow {
   total_spent: number
 }
 
-interface BonusData {
-  pool_balance: number
-  lifetime_delivered_orders: number
-  next_milestone: { orders: number; bonus: number } | null
-  awarded: PartnerBonus[]
+interface FirstSaleBonus {
+  amount: number
+  earned: boolean
+  paid: boolean
 }
 
 export function PartnerDetail({ partnerId }: { partnerId: string }) {
@@ -45,8 +44,9 @@ export function PartnerDetail({ partnerId }: { partnerId: string }) {
   const [stats, setStats] = useState<Stats | null>(null)
   const [orders, setOrders] = useState<OrderRow[]>([])
   const [customers, setCustomers] = useState<CustomerRow[]>([])
-  const [bonuses, setBonuses] = useState<BonusData | null>(null)
-  const [markingPaidId, setMarkingPaidId] = useState<string | null>(null)
+  const [firstSaleBonus, setFirstSaleBonus] = useState<FirstSaleBonus | null>(null)
+  const [bonusAmountInput, setBonusAmountInput] = useState('')
+  const [markingPaid, setMarkingPaid] = useState(false)
 
   const load = () => {
     fetch(`/api/admin/partners/${partnerId}`)
@@ -56,19 +56,33 @@ export function PartnerDetail({ partnerId }: { partnerId: string }) {
         setStats(d.stats)
         setOrders(d.orders ?? [])
         setCustomers(d.customers ?? [])
-        setBonuses(d.bonuses ?? null)
+        setFirstSaleBonus(d.first_sale_bonus ?? null)
+        setBonusAmountInput(String(d.first_sale_bonus?.amount ?? 10))
       })
   }
 
   useEffect(load, [partnerId])
 
-  const markPaid = async (bonusId: string) => {
-    setMarkingPaidId(bonusId)
+  const saveBonusAmount = async () => {
+    await fetch(`/api/admin/partners/${partnerId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ first_sale_bonus_amount: Number(bonusAmountInput) }),
+    })
+    load()
+  }
+
+  const markPaid = async () => {
+    setMarkingPaid(true)
     try {
-      const res = await fetch(`/api/admin/partner-bonuses/${bonusId}`, { method: 'PATCH' })
-      if (res.ok) load()
+      await fetch(`/api/admin/partners/${partnerId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ first_sale_bonus_paid: true }),
+      })
+      load()
     } finally {
-      setMarkingPaidId(null)
+      setMarkingPaid(false)
     }
   }
 
@@ -112,69 +126,43 @@ export function PartnerDetail({ partnerId }: { partnerId: string }) {
         </div>
       </div>
 
-      {bonuses && (
+      {firstSaleBonus && (
         <div className="rounded-xl border border-neutral-200 bg-white p-4">
-          <h2 className="mb-3 text-sm font-semibold">Milestone bonuses</h2>
-          <div className="mb-3 grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
-            <div>
-              <p className="text-xs text-neutral-600">Bonus pool balance</p>
-              <p className="font-semibold">${bonuses.pool_balance.toFixed(2)}</p>
-            </div>
-            <div>
-              <p className="text-xs text-neutral-600">Lifetime delivered orders</p>
-              <p className="font-semibold">{bonuses.lifetime_delivered_orders}</p>
-            </div>
-            {bonuses.next_milestone && (
-              <div>
-                <p className="text-xs text-neutral-600">Next milestone</p>
-                <p className="font-semibold">
-                  {bonuses.next_milestone.orders} orders → ${bonuses.next_milestone.bonus.toFixed(2)}
-                </p>
-              </div>
-            )}
+          <h2 className="mb-3 text-sm font-semibold">First-sale bonus</h2>
+          <div className="flex flex-wrap items-end gap-3">
+            <label className="flex flex-col gap-1 text-[10px] font-medium uppercase text-neutral-600">
+              Bonus amount ($)
+              <input
+                type="number"
+                step="0.01"
+                value={bonusAmountInput}
+                onChange={(e) => setBonusAmountInput(e.target.value)}
+                onBlur={saveBonusAmount}
+                className="w-24 rounded border border-neutral-300 px-2 py-1 text-xs"
+              />
+            </label>
+            <p className="text-xs text-neutral-600">Modulable per commercial — some get more, some less.</p>
           </div>
 
-          {bonuses.next_milestone && (
-            <div className="mb-3">
-              <div className="h-2 w-full overflow-hidden rounded-full bg-neutral-100">
-                <div
-                  className="h-full rounded-full bg-black transition-all"
-                  style={{ width: `${Math.min((bonuses.lifetime_delivered_orders / bonuses.next_milestone.orders) * 100, 100)}%` }}
-                />
-              </div>
-              <p className="mt-1 text-xs text-neutral-600">
-                {bonuses.lifetime_delivered_orders} / {bonuses.next_milestone.orders} orders
-              </p>
+          <div className="mt-3 flex items-center justify-between text-sm">
+            <div>
+              {!firstSaleBonus.earned && <p className="text-neutral-600">Not earned yet — awarded on their first delivered referral.</p>}
+              {firstSaleBonus.earned && firstSaleBonus.paid && (
+                <p className="font-medium text-green-700">✅ Earned and paid</p>
+              )}
+              {firstSaleBonus.earned && !firstSaleBonus.paid && (
+                <p className="font-medium text-amber-700">🎁 Earned — awaiting payment</p>
+              )}
             </div>
-          )}
-
-          <div className="flex flex-col gap-2 text-xs">
-            {bonuses.awarded.map((b) => (
-              <div key={b.id} className="flex items-center justify-between border-b border-neutral-100 pb-2">
-                <div>
-                  <p className="font-medium">{b.milestone_orders} orders milestone</p>
-                  <p className="text-neutral-600">
-                    Earned {new Date(b.created_at).toLocaleDateString()}
-                    {b.paid_out && b.paid_out_at ? ` · paid ${new Date(b.paid_out_at).toLocaleDateString()}` : ''}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <p className="font-semibold">${b.bonus_amount.toFixed(2)}</p>
-                  {b.paid_out ? (
-                    <span className="rounded-full bg-green-100 px-2 py-1 text-[10px] font-medium text-green-800">Paid</span>
-                  ) : (
-                    <button
-                      disabled={markingPaidId === b.id}
-                      onClick={() => markPaid(b.id)}
-                      className="rounded-lg bg-black px-3 py-1.5 text-[10px] font-medium text-white disabled:opacity-50"
-                    >
-                      {markingPaidId === b.id ? 'Marking…' : 'Mark paid'}
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
-            {bonuses.awarded.length === 0 && <p className="text-neutral-600">No milestones reached yet.</p>}
+            {firstSaleBonus.earned && !firstSaleBonus.paid && (
+              <button
+                disabled={markingPaid}
+                onClick={markPaid}
+                className="rounded-lg bg-black px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+              >
+                {markingPaid ? 'Marking…' : 'Mark paid'}
+              </button>
+            )}
           </div>
         </div>
       )}

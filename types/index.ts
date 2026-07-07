@@ -26,18 +26,15 @@ export interface Partner {
   created_at: string
   /** Requires migration: alter table partners add column if not exists telegram_id text; */
   telegram_id?: string | null
-  /** Requires migration: alter table partners add column if not exists bonus_pool_balance decimal(10,2) not null default 0; */
-  bonus_pool_balance?: number
-}
-
-export interface PartnerBonus {
-  id: string
-  partner_id: string
-  milestone_orders: number
-  bonus_amount: number
-  paid_out: boolean
-  paid_out_at: string | null
-  created_at: string
+  /**
+   * Flat one-time bonus paid on this commercial's first-ever delivered
+   * referral — modulable per commercial (some get $5, some $10+) rather
+   * than a fixed platform-wide amount.
+   * Requires migration: alter table partners add column if not exists first_sale_bonus_amount decimal(10,2) not null default 10;
+   */
+  first_sale_bonus_amount?: number
+  /** Requires migration: alter table partners add column if not exists first_sale_bonus_paid boolean not null default false; */
+  first_sale_bonus_paid?: boolean
 }
 
 export interface QrCode {
@@ -116,6 +113,18 @@ export interface Driver {
   last_name: string | null
   is_owner: boolean
   is_active: boolean
+  created_at: string
+  /** Requires migration: alter table drivers add column if not exists bonus_pool_balance decimal(10,2) not null default 0; */
+  bonus_pool_balance?: number
+}
+
+export interface DriverBonus {
+  id: string
+  driver_id: string
+  milestone_orders: number
+  bonus_amount: number
+  paid_out: boolean
+  paid_out_at: string | null
   created_at: string
 }
 

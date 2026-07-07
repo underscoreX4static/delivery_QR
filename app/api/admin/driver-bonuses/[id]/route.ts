@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin-auth'
-import { markBonusPaid } from '@/lib/partner-bonuses'
+import { markBonusPaid } from '@/lib/driver-bonuses'
 
 export async function PATCH(_request: NextRequest, context: { params: Promise<{ id: string }> }) {
   const admin = await requireAdmin()

@@ -3,7 +3,7 @@ import type { Message, Update } from 'node-telegram-bot-api'
 import { supabaseAdmin } from '@/lib/supabase'
 import { escapeMarkdown, sendMessage, sendOrderButton } from '@/lib/telegram'
 import { handleCallbackQuery, handleReplyMessage } from '@/lib/telegram-callbacks'
-import { COMMERCIAL_BONUS_MILESTONES } from '@/lib/calculations'
+import { DRIVER_BONUS_MILESTONES } from '@/lib/calculations'
 
 // Telegram redelivers an update if the webhook doesn't respond quickly
 // enough — order-status transitions are idempotent against that already,
@@ -87,6 +87,8 @@ async function handleCommand(message: Message) {
     await handleDriverOrders(message)
   } else if (command === '/mystats') {
     await handleMyStats(message)
+  } else if (command === '/mybonus') {
+    await handleMyBonus(message)
   }
 }
 
@@ -184,6 +186,49 @@ async function handleDriverOrders(message: Message) {
   await sendMessage(chatId, `Unassigned confirmed orders:\n\n${lines.join('\n')}`)
 }
 
+/** Self-serve milestone bonus progress for drivers — matched by drivers.telegram_id. */
+async function handleMyBonus(message: Message) {
+  const chatId = message.chat.id
+  const telegramId = String(message.from!.id)
+
+  const { data: driver } = await supabaseAdmin
+    .from('drivers')
+    .select('id, first_name, bonus_pool_balance')
+    .eq('telegram_id', telegramId)
+    .maybeSingle()
+
+  if (!driver) {
+    await sendMessage(chatId, "❌ You're not registered as a driver. Contact HAZE to get set up.")
+    return
+  }
+
+  const { count: deliveredCount } = await supabaseAdmin
+    .from('orders')
+    .select('id', { count: 'exact', head: true })
+    .eq('driver_id', driver.id)
+    .eq('status', 'delivered')
+
+  const lifetimeOrders = deliveredCount ?? 0
+  const nextMilestone = DRIVER_BONUS_MILESTONES.find((m) => m.orders > lifetimeOrders) ?? null
+  const progressLine = nextMilestone
+    ? `🎯 *Next bonus:* ${lifetimeOrders}/${nextMilestone.orders} deliveries → $${nextMilestone.bonus.toFixed(2)}`
+    : `🏆 All milestones reached!`
+
+  const msg = `
+📊 *Your bonus progress — HAZE Delivery*
+
+👋 Hey ${escapeMarkdown(driver.first_name)}!
+
+📦 *Deliveries made:* ${lifetimeOrders}
+${progressLine}
+💰 *Bonus pool balance:* $${(driver.bonus_pool_balance ?? 0).toFixed(2)}
+
+Keep it up! 🚗
+  `.trim()
+
+  await sendMessage(chatId, msg, { parse_mode: 'Markdown' })
+}
+
 /** Self-serve referral stats for commercials — matched by partners.telegram_id. */
 async function handleMyStats(message: Message) {
   const chatId = message.chat.id
@@ -191,7 +236,7 @@ async function handleMyStats(message: Message) {
 
   const { data: partner } = await supabaseAdmin
     .from('partners')
-    .select('id, name, commission_rate, bonus_pool_balance')
+    .select('id, name, commission_rate, first_sale_bonus_amount, first_sale_bonus_paid')
     .eq('telegram_id', telegramId)
     .maybeSingle()
 
@@ -227,12 +272,13 @@ async function handleMyStats(message: Message) {
     .reduce((sum, c) => sum + Number(c.commission_amount), 0)
   const pending = totalEarned - totalPaid
 
-  // totalOrders is delivered orders, which is exactly the milestone metric —
-  // lifetime delivered orders attributed to this partner's QR codes.
-  const nextMilestone = COMMERCIAL_BONUS_MILESTONES.find((m) => m.orders > totalOrders) ?? null
-  const bonusSection = nextMilestone
-    ? `\n🎯 *Next bonus:* ${totalOrders}/${nextMilestone.orders} orders → $${nextMilestone.bonus.toFixed(2)}\n💰 *Bonus pool:* $${(partner.bonus_pool_balance ?? 0).toFixed(2)}\n`
-    : `\n💰 *Bonus pool:* $${(partner.bonus_pool_balance ?? 0).toFixed(2)} (all milestones reached!)\n`
+  const bonusAmount = partner.first_sale_bonus_amount ?? 10
+  const bonusSection =
+    totalOrders === 0
+      ? `\n🎁 *First-sale bonus:* $${bonusAmount.toFixed(2)} — earned on your first delivered order\n`
+      : partner.first_sale_bonus_paid
+        ? `\n🎁 *First-sale bonus:* $${bonusAmount.toFixed(2)} — paid ✅\n`
+        : `\n🎁 *First-sale bonus:* $${bonusAmount.toFixed(2)} — earned, awaiting payment\n`
 
   const msg = `
 📊 *Your stats — HAZE Delivery*

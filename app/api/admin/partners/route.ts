@@ -41,6 +41,7 @@ export async function POST(request: NextRequest) {
   if (!name) return NextResponse.json({ error: 'name is required' }, { status: 400 })
 
   const commissionRate = Number(body?.commission_rate ?? 0)
+  const firstSaleBonusAmount = Number(body?.first_sale_bonus_amount ?? 10)
 
   const { data: partner, error } = await supabaseAdmin
     .from('partners')
@@ -50,6 +51,7 @@ export async function POST(request: NextRequest) {
       contact_name: body?.contact_name || null,
       contact_phone: body?.contact_phone || null,
       commission_rate: commissionRate,
+      first_sale_bonus_amount: firstSaleBonusAmount,
     })
     .select('*')
     .single()

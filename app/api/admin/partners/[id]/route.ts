@@ -2,10 +2,17 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { clearCommercialCommands, setCommercialCommands } from '@/lib/telegram'
-import { getPartnerBonuses } from '@/lib/partner-bonuses'
-import { COMMERCIAL_BONUS_MILESTONES } from '@/lib/calculations'
 
-const ALLOWED_FIELDS = ['name', 'address', 'contact_name', 'contact_phone', 'commission_rate', 'telegram_id', 'is_active']
+const ALLOWED_FIELDS = [
+  'name',
+  'address',
+  'contact_name',
+  'contact_phone',
+  'commission_rate',
+  'telegram_id',
+  'is_active',
+  'first_sale_bonus_amount',
+]
 
 export async function GET(_request: NextRequest, context: { params: Promise<{ id: string }> }) {
   const admin = await requireAdmin()
@@ -19,7 +26,7 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ id
   const { data: qrCodes } = await supabaseAdmin.from('qr_codes').select('id').eq('partner_id', id)
   const qrIds = (qrCodes ?? []).map((q) => q.id)
 
-  const [{ data: scans }, { data: orders }, { data: commissions }, bonuses] = await Promise.all([
+  const [{ data: scans }, { data: orders }, { data: commissions }] = await Promise.all([
     qrIds.length
       ? supabaseAdmin.from('qr_scans').select('user_id').in('qr_code_id', qrIds)
       : Promise.resolve({ data: [] as { user_id: string | null }[] }),
@@ -27,7 +34,6 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ id
       ? supabaseAdmin.from('orders').select('*, users(first_name, last_name)').in('qr_code_id', qrIds)
       : Promise.resolve({ data: [] as never[] }),
     supabaseAdmin.from('affiliate_commissions').select('*').eq('partner_id', id),
-    getPartnerBonuses(id),
   ])
 
   const totalScans = scans?.length ?? 0
@@ -90,11 +96,12 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ id
     },
     orders: ordersTable.sort((a, b) => (a.created_at < b.created_at ? 1 : -1)),
     customers: [...customersByUser.values()].sort((a, b) => b.total_spent - a.total_spent),
-    bonuses: {
-      pool_balance: partner.bonus_pool_balance ?? 0,
-      lifetime_delivered_orders: deliveredOrders.length,
-      next_milestone: COMMERCIAL_BONUS_MILESTONES.find((m) => m.orders > deliveredOrders.length) ?? null,
-      awarded: bonuses,
+    first_sale_bonus: {
+      amount: partner.first_sale_bonus_amount ?? 10,
+      // Earned as soon as they have at least one commission on record —
+      // matches the "first delivered commission" check in markDelivered.
+      earned: (commissions?.length ?? 0) > 0,
+      paid: partner.first_sale_bonus_paid ?? false,
     },
   })
 }

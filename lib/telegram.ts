@@ -93,6 +93,7 @@ export async function setDriverCommands(chatId: string | number) {
   return setChatCommands(chatId, [
     { command: 'start', description: 'Start ordering' },
     { command: 'orders', description: 'View available orders' },
+    { command: 'mybonus', description: 'View your milestone bonus progress' },
   ])
 }
 

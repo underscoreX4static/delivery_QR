@@ -108,15 +108,14 @@ export function suggestSellPrice(costPrice: number, targetMargin: number): numbe
 }
 
 /**
- * Uber-style loyalty milestones for commercials, keyed by lifetime delivered
- * order count attributed to that partner's QR codes. Each threshold is
- * awarded at most once per partner. Fixed reward amounts rather than a
- * percentage of the pool balance — deliberately a separate concern from
- * calculateBonusPoolContribution below (the pool is what the owner has set
- * aside toward these obligations, not what determines the reward itself).
- * Placeholder amounts — tune once real figures are decided.
+ * Uber-style loyalty milestones for drivers, keyed by lifetime delivered
+ * order count. Each threshold is awarded at most once per driver. Fixed
+ * reward amounts rather than a percentage of the pool balance — deliberately
+ * a separate concern from calculateBonusPoolContribution below (the pool is
+ * what the owner has set aside toward these obligations, not what determines
+ * the reward itself). Placeholder amounts — tune once real figures are decided.
  */
-export const COMMERCIAL_BONUS_MILESTONES: { orders: number; bonus: number }[] = [
+export const DRIVER_BONUS_MILESTONES: { orders: number; bonus: number }[] = [
   { orders: 5, bonus: 20 },
   { orders: 25, bonus: 50 },
   { orders: 50, bonus: 100 },
@@ -125,9 +124,9 @@ export const COMMERCIAL_BONUS_MILESTONES: { orders: number; bonus: number }[] = 
 ]
 
 /**
- * Portion of the owner's net (post-commission) profit on a single delivered,
- * partner-attributed order that gets set aside into that partner's bonus
- * pool. Driver payout and the partner's own per-order commission are
+ * Portion of the owner's net (post-commission) profit on a single delivered
+ * order that gets set aside into the assigned driver's bonus pool. The
+ * driver's own delivery-fee-based payout and any partner commission are
  * untouched — this only reduces what the owner keeps, in exchange for
  * funding the milestone bonuses above.
  */
