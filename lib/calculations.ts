@@ -58,6 +58,16 @@ export interface PayoutInput {
   driverIsOwner: boolean
   /** partner.commission_rate snapshot; 0 if the order has no attributed partner */
   partnerCommissionRate: number
+  /**
+   * Use this exact figure instead of total × partnerCommissionRate. For a
+   * delivered order, the real commission owed is whatever was frozen into
+   * affiliate_commissions at delivery time — a partner's rate can change
+   * afterward, and recomputing from the current rate would make historical
+   * earnings figures silently drift even though nothing was actually repaid
+   * differently. Pass the snapshot amount here whenever one already exists
+   * (i.e. everywhere except the moment the order is first delivered).
+   */
+  affiliateCommissionOverride?: number
 }
 
 /**
@@ -72,7 +82,10 @@ export function calculatePayout(input: PayoutInput): PayoutBreakdown {
     ? 0
     : round2(input.deliveryFee + grossProfit * DRIVER_PAYOUT_SHARE)
 
-  const affiliateCommission = round2(input.total * input.partnerCommissionRate)
+  const affiliateCommission =
+    input.affiliateCommissionOverride !== undefined
+      ? round2(input.affiliateCommissionOverride)
+      : round2(input.total * input.partnerCommissionRate)
 
   const ownerNet = round2(grossProfit * OWNER_PROFIT_SHARE - affiliateCommission)
 

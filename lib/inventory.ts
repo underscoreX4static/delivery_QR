@@ -6,6 +6,39 @@ import type { CartLineItem, ConsumptionPlan, BatchConsumption, ProductBatch, Ord
 // products.stock_qty is kept in sync automatically by the DB trigger
 // trg_sync_product_stock — do not write to it directly either.
 
+const MAX_LINE_ITEMS = 30
+const MAX_QUANTITY_PER_ITEM = 99
+
+/**
+ * Validates raw client JSON into well-formed cart items before it ever
+ * reaches planConsumption — this is the public entry point for both order
+ * creation and cart preview, so it can't trust quantity, shape, or bounds.
+ * Rejects (returns null) on: non-integer/out-of-range quantity, a repeated
+ * product_id (which would otherwise silently plan the same stock twice),
+ * or more line items than a real cart could plausibly have.
+ */
+export function validateCartItems(items: unknown): CartLineItem[] | null {
+  if (!Array.isArray(items) || items.length === 0 || items.length > MAX_LINE_ITEMS) return null
+
+  const seen = new Set<string>()
+  const result: CartLineItem[] = []
+
+  for (const raw of items) {
+    if (typeof raw !== 'object' || raw === null) return null
+    const { product_id: productId, quantity } = raw as Record<string, unknown>
+
+    if (typeof productId !== 'string' || !productId || seen.has(productId)) return null
+    if (!Number.isInteger(quantity) || (quantity as number) < 1 || (quantity as number) > MAX_QUANTITY_PER_ITEM) {
+      return null
+    }
+
+    seen.add(productId)
+    result.push({ product_id: productId, quantity: quantity as number })
+  }
+
+  return result
+}
+
 async function activeBatchesForProduct(productId: string): Promise<ProductBatch[]> {
   const { data, error } = await supabaseAdmin
     .from('product_batches')
@@ -134,21 +167,37 @@ export async function refundConsumption(orderItems: OrderItem[]): Promise<void> 
   }
 }
 
+const INCREMENT_RETRY_ATTEMPTS = 5
+
+/**
+ * Adds `quantity` back onto a batch (refunds, commit rollback). Uses the
+ * same optimistic-concurrency pattern as commitConsumption's decrement —
+ * without it, a refund landing at the same instant as another order's
+ * commit could read-then-write over each other and lose one side's update.
+ * Unlike a decrement, an increment has no legitimate reason to ever fail
+ * (there's no "insufficient stock" concept when giving stock back), so this
+ * retries against fresh state instead of surfacing a transient race to staff.
+ */
 async function incrementBatch(batchId: string, quantity: number): Promise<void> {
-  const { data: batch, error: readError } = await supabaseAdmin
-    .from('product_batches')
-    .select('quantity_remaining')
-    .eq('id', batchId)
-    .single()
+  for (let attempt = 0; attempt < INCREMENT_RETRY_ATTEMPTS; attempt++) {
+    const { data: batch, error: readError } = await supabaseAdmin
+      .from('product_batches')
+      .select('quantity_remaining')
+      .eq('id', batchId)
+      .single()
 
-  if (readError || !batch) throw new Error(`Batch ${batchId} not found`)
+    if (readError || !batch) throw new Error(`Batch ${batchId} not found`)
 
-  const { error: writeError } = await supabaseAdmin
-    .from('product_batches')
-    .update({ quantity_remaining: batch.quantity_remaining + quantity })
-    .eq('id', batchId)
+    const { error: writeError, count } = await supabaseAdmin
+      .from('product_batches')
+      .update({ quantity_remaining: batch.quantity_remaining + quantity }, { count: 'exact' })
+      .eq('id', batchId)
+      .eq('quantity_remaining', batch.quantity_remaining)
 
-  if (writeError) throw new Error(`Failed to refund batch ${batchId}: ${writeError.message}`)
+    if (!writeError && count) return
+  }
+
+  throw new Error(`Failed to refund batch ${batchId}: too much concurrent contention`)
 }
 
 /**

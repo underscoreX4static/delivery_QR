@@ -12,6 +12,7 @@ import {
   confirmDriverSettlement,
   confirmSettlementReceived,
   disputeSettlement,
+  getSettlementDriverTelegramId,
 } from '@/lib/settlements'
 import type { Order } from '@/types/index'
 
@@ -66,16 +67,16 @@ export async function handleCallbackQuery(query: CallbackQuery) {
       await startCancelFlow(query, orderId, fromTelegramId)
       break
     case 'settle_confirm':
-      await settleConfirm(query, orderId)
+      await settleConfirm(query, orderId, fromTelegramId)
       break
     case 'settle_deny':
-      await settleDeny(query, orderId)
+      await settleDeny(query, orderId, fromTelegramId)
       break
     case 'settle_received':
-      await settleReceived(query, orderId)
+      await settleReceived(query, orderId, fromTelegramId)
       break
     case 'settle_received_deny':
-      await settleReceivedDeny(query, orderId)
+      await settleReceivedDeny(query, orderId, fromTelegramId)
       break
     default:
       await answerCallbackQuery(query.id)
@@ -306,34 +307,56 @@ async function startCancelFlow(query: CallbackQuery, orderId: string, fromTelegr
   })
 }
 
-async function settleConfirm(query: CallbackQuery, settlementId: string) {
+/**
+ * Only the driver a settlement actually belongs to may confirm/dispute it —
+ * these buttons attest "I received this cash", so anyone else tapping them
+ * (a forwarded message, a guessed callback_data) must not be able to.
+ */
+async function isAuthorizedForSettlement(query: CallbackQuery, settlementId: string, fromTelegramId: string): Promise<boolean> {
+  const driverTelegramId = await getSettlementDriverTelegramId(settlementId)
+  if (driverTelegramId !== fromTelegramId) {
+    await answerCallbackQuery(query.id, 'Only the driver this settlement belongs to can do that.')
+    return false
+  }
+  return true
+}
+
+async function settleConfirm(query: CallbackQuery, settlementId: string, fromTelegramId: string) {
+  if (!(await isAuthorizedForSettlement(query, settlementId, fromTelegramId))) return
+
   const result = await confirmDriverSettlement(settlementId)
   if (!result.ok) {
     await answerCallbackQuery(query.id, `Could not confirm: ${result.error}`)
     return
   }
   await answerCallbackQuery(query.id, 'Settlement confirmed')
-  await sendMessage(String(query.from.id), '✅ Settlement confirmed. The owner will hand over your cash share.')
+  await sendMessage(fromTelegramId, '✅ Settlement confirmed. The owner will hand over your cash share.')
 }
 
-async function settleDeny(query: CallbackQuery, settlementId: string) {
+async function settleDeny(query: CallbackQuery, settlementId: string, fromTelegramId: string) {
+  if (!(await isAuthorizedForSettlement(query, settlementId, fromTelegramId))) return
+
   await disputeSettlement(settlementId, 'confirm')
   await answerCallbackQuery(query.id, 'Owner notified')
-  await sendMessage(String(query.from.id), 'The owner has been notified to resolve this settlement with you.')
+  await sendMessage(fromTelegramId, 'The owner has been notified to resolve this settlement with you.')
 }
 
-async function settleReceived(query: CallbackQuery, settlementId: string) {
+async function settleReceived(query: CallbackQuery, settlementId: string, fromTelegramId: string) {
+  if (!(await isAuthorizedForSettlement(query, settlementId, fromTelegramId))) return
+
   const result = await confirmSettlementReceived(settlementId)
   if (!result.ok) {
     await answerCallbackQuery(query.id, `Could not confirm: ${result.error}`)
     return
   }
   await answerCallbackQuery(query.id, 'Thanks!')
-  await sendMessage(String(query.from.id), '✅ Payment receipt confirmed — settlement locked.')
+  await sendMessage(fromTelegramId, '✅ Payment receipt confirmed — settlement locked.')
 }
 
-async function settleReceivedDeny(query: CallbackQuery, settlementId: string) {
+async function settleReceivedDeny(query: CallbackQuery, settlementId: string, fromTelegramId: string) {
+  if (!(await isAuthorizedForSettlement(query, settlementId, fromTelegramId))) return
+
   await disputeSettlement(settlementId, 'received')
   await answerCallbackQuery(query.id, 'Owner notified')
-  await sendMessage(String(query.from.id), 'The owner has been notified to resolve this payment with you.')
+  await sendMessage(fromTelegramId, 'The owner has been notified to resolve this payment with you.')
 }

@@ -115,6 +115,14 @@ export async function createDriverSettlement(driverId: string, proposedBy: strin
  * On-demand partner/affiliate settlement over an arbitrary date range —
  * sums unpaid commissions. No driver-style Telegram confirmation loop;
  * goes straight to 'confirmed', awaiting the admin's "mark paid" action.
+ *
+ * The exact set of covered orders is frozen into settlement_orders at
+ * creation time (same table the driver flow uses) rather than re-deriving
+ * "unpaid commissions in this period" again when markSettlementPaid() runs.
+ * Without that, any commission created in the gap between creating the
+ * settlement and the admin clicking "mark paid" — which can be hours or
+ * days later — would get silently flipped to paid_out without ever having
+ * been included in the total the admin actually reviewed and paid out.
  */
 export async function createPartnerSettlement(
   partnerId: string,
@@ -124,7 +132,7 @@ export async function createPartnerSettlement(
 ): Promise<Result> {
   const { data: commissions } = await supabaseAdmin
     .from('affiliate_commissions')
-    .select('commission_amount')
+    .select('order_id, commission_amount')
     .eq('partner_id', partnerId)
     .eq('paid_out', false)
     .gte('created_at', periodStart)
@@ -153,18 +161,46 @@ export async function createPartnerSettlement(
     .single()
 
   if (error || !settlement) return { ok: false, error: error?.message ?? 'Failed to create settlement' }
+
+  await supabaseAdmin
+    .from('settlement_orders')
+    .insert((commissions ?? []).map((c) => ({ settlement_id: settlement.id, order_id: c.order_id })))
+
   return { ok: true, settlement: settlement as Settlement }
 }
 
+/** Driver's telegram_id for a settlement, or null — used to authorize the confirm/receive callbacks. */
+export async function getSettlementDriverTelegramId(settlementId: string): Promise<string | null> {
+  const { data: settlement } = await supabaseAdmin
+    .from('settlements')
+    .select('driver_id')
+    .eq('id', settlementId)
+    .single()
+  if (!settlement?.driver_id) return null
+
+  const { data: driver } = await supabaseAdmin
+    .from('drivers')
+    .select('telegram_id')
+    .eq('id', settlement.driver_id)
+    .single()
+  return driver?.telegram_id ?? null
+}
+
+/**
+ * proposed -> confirmed. Conditioned on the current status so re-tapping an
+ * old Telegram message (e.g. after the owner has already marked it paid)
+ * can't regress the settlement backwards through the state machine.
+ */
 export async function confirmDriverSettlement(settlementId: string): Promise<Result> {
   const { data: settlement, error } = await supabaseAdmin
     .from('settlements')
     .update({ status: 'confirmed', confirmed_at: new Date().toISOString() })
     .eq('id', settlementId)
+    .eq('status', 'proposed')
     .select('*')
     .single()
 
-  if (error || !settlement) return { ok: false, error: 'Settlement not found' }
+  if (error || !settlement) return { ok: false, error: 'Settlement not found, or already past the "proposed" step' }
   return { ok: true, settlement: settlement as Settlement }
 }
 
@@ -178,6 +214,9 @@ export async function disputeSettlement(settlementId: string, stage: 'confirm' |
  * Admin marks the settlement as physically paid. For driver settlements
  * this prompts the driver to confirm receipt (step 8); for partner
  * settlements it directly flips the covered commissions to paid_out.
+ * Conditioned on the current status being 'confirmed' so a repeated click
+ * can't re-run the payout side effects (double Telegram prompt to the
+ * driver, or re-flipping already-paid commissions).
  */
 export async function markSettlementPaid(settlementId: string): Promise<Result> {
   const { data: settlement } = await supabaseAdmin.from('settlements').select('*').eq('id', settlementId).single()
@@ -187,21 +226,29 @@ export async function markSettlementPaid(settlementId: string): Promise<Result> 
     .from('settlements')
     .update({ status: 'paid' })
     .eq('id', settlementId)
+    .eq('status', 'confirmed')
     .select('*')
     .single()
 
-  if (error || !updated) return { ok: false, error: 'Failed to update settlement' }
+  if (error || !updated) return { ok: false, error: 'Settlement not found, or not awaiting payment' }
 
   if (settlement.type === 'partner') {
-    const partnerId = settlement.notes?.match(/^partner:([0-9a-f-]{36})$/i)?.[1]
-    if (partnerId) {
+    // Pay out exactly the orders frozen into settlement_orders at creation —
+    // never re-derive "unpaid commissions in this period" here, or a
+    // commission created after creation but before this call gets paid
+    // without ever having been part of the reviewed total.
+    const { data: coveredOrders } = await supabaseAdmin
+      .from('settlement_orders')
+      .select('order_id')
+      .eq('settlement_id', settlementId)
+    const orderIds = (coveredOrders ?? []).map((o) => o.order_id)
+
+    if (orderIds.length > 0) {
       await supabaseAdmin
         .from('affiliate_commissions')
         .update({ paid_out: true, paid_out_at: new Date().toISOString() })
-        .eq('partner_id', partnerId)
+        .in('order_id', orderIds)
         .eq('paid_out', false)
-        .gte('created_at', settlement.period_start)
-        .lte('created_at', settlement.period_end)
     }
   } else if (settlement.driver_id) {
     const { data: driver } = await supabaseAdmin
@@ -227,15 +274,17 @@ export async function markSettlementPaid(settlementId: string): Promise<Result> 
   return { ok: true, settlement: updated as Settlement }
 }
 
+/** paid -> payment_received. Conditioned on status for the same reason as confirmDriverSettlement above. */
 export async function confirmSettlementReceived(settlementId: string): Promise<Result> {
   const { data: settlement, error } = await supabaseAdmin
     .from('settlements')
     .update({ status: 'payment_received', payment_confirmed_at: new Date().toISOString() })
     .eq('id', settlementId)
+    .eq('status', 'paid')
     .select('*')
     .single()
 
-  if (error || !settlement) return { ok: false, error: 'Settlement not found' }
+  if (error || !settlement) return { ok: false, error: 'Settlement not found, or already past the "paid" step' }
   return { ok: true, settlement: settlement as Settlement }
 }
 

@@ -31,22 +31,17 @@ export async function computeEarnings(start: Date | null): Promise<EarningsSumma
 
   const orderIds = orders.map((o) => o.id)
   const driverIds = [...new Set(orders.map((o) => o.driver_id).filter((id): id is string => Boolean(id)))]
-  const qrCodeIds = [...new Set(orders.map((o) => o.qr_code_id).filter((id): id is string => Boolean(id)))]
 
-  const [{ data: items }, { data: drivers }, { data: qrCodes }] = await Promise.all([
+  const [{ data: items }, { data: drivers }, { data: commissions }] = await Promise.all([
     supabaseAdmin.from('order_items').select('*').in('order_id', orderIds),
     driverIds.length
       ? supabaseAdmin.from('drivers').select('id, is_owner').in('id', driverIds)
       : Promise.resolve({ data: [] as { id: string; is_owner: boolean }[] }),
-    qrCodeIds.length
-      ? supabaseAdmin.from('qr_codes').select('id, partner_id').in('id', qrCodeIds)
-      : Promise.resolve({ data: [] as { id: string; partner_id: string }[] }),
+    // Read the frozen commission per order rather than recomputing from the
+    // partner's current commission_rate — see calculatePayout's
+    // affiliateCommissionOverride doc for why.
+    supabaseAdmin.from('affiliate_commissions').select('order_id, commission_amount').in('order_id', orderIds),
   ])
-
-  const partnerIds = [...new Set((qrCodes ?? []).map((q) => q.partner_id).filter(Boolean))]
-  const { data: partners } = partnerIds.length
-    ? await supabaseAdmin.from('partners').select('id, commission_rate').in('id', partnerIds)
-    : { data: [] as { id: string; commission_rate: number }[] }
 
   const itemsByOrder = new Map<string, OrderItem[]>()
   for (const item of (items as OrderItem[]) ?? []) {
@@ -56,8 +51,7 @@ export async function computeEarnings(start: Date | null): Promise<EarningsSumma
   }
 
   const ownerDriverIds = new Set((drivers ?? []).filter((d) => d.is_owner).map((d) => d.id))
-  const partnerIdByQrCode = new Map((qrCodes ?? []).map((q) => [q.id, q.partner_id]))
-  const commissionRateByPartner = new Map((partners ?? []).map((p) => [p.id, p.commission_rate]))
+  const commissionByOrder = new Map((commissions ?? []).map((c) => [c.order_id, c.commission_amount]))
 
   const summary: EarningsSummary = { ...EMPTY_SUMMARY, orderCount: orders.length }
 
@@ -65,8 +59,6 @@ export async function computeEarnings(start: Date | null): Promise<EarningsSumma
     const orderItems = itemsByOrder.get(order.id) ?? []
     const costOfGoods = orderItems.reduce((sum, i) => sum + i.unit_cost_price * i.quantity, 0)
     const driverIsOwner = order.driver_id ? ownerDriverIds.has(order.driver_id) : false
-    const partnerId = order.qr_code_id ? partnerIdByQrCode.get(order.qr_code_id) : null
-    const partnerCommissionRate = partnerId ? commissionRateByPartner.get(partnerId) ?? 0 : 0
 
     const payout = calculatePayout({
       subtotal: order.subtotal,
@@ -75,7 +67,8 @@ export async function computeEarnings(start: Date | null): Promise<EarningsSumma
       total: order.total,
       costOfGoods,
       driverIsOwner,
-      partnerCommissionRate,
+      partnerCommissionRate: 0,
+      affiliateCommissionOverride: commissionByOrder.get(order.id) ?? 0,
     })
 
     summary.grossRevenue += payout.revenue

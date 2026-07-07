@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getOrCreateUser, requireTelegramUser } from '@/lib/client-auth'
 import { supabaseAdmin } from '@/lib/supabase'
-import { planConsumption } from '@/lib/inventory'
+import { planConsumption, validateCartItems } from '@/lib/inventory'
 import { calculateOrderPricing } from '@/lib/calculations'
 import { getSettings } from '@/lib/settings'
 import { getSlotSettings, isStoreOpenNow, normalizeSlotIso } from '@/lib/slots'
 import { isAddressInDeliveryZone } from '@/lib/zones'
 import { sendMessage, sendNewOrderNotification } from '@/lib/telegram'
-import type { CartLineItem } from '@/types/index'
+
+const ACTIVE_ORDER_STATUSES = ['pending', 'confirmed', 'preparing', 'on_the_way']
+const MAX_ACTIVE_ORDERS_PER_USER = 3
 
 export async function GET(request: NextRequest) {
   const telegramUser = requireTelegramUser(request)
@@ -31,14 +33,14 @@ export async function POST(request: NextRequest) {
   if (!telegramUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await request.json().catch(() => null)
-  const items = body?.items as CartLineItem[] | undefined
+  const items = validateCartItems(body?.items)
   const deliveryAddress = typeof body?.delivery_address === 'string' ? body.delivery_address.trim() : ''
   const scheduledAt = typeof body?.scheduled_at === 'string' ? normalizeSlotIso(body.scheduled_at) : null
   const notes = typeof body?.notes === 'string' ? body.notes.trim() : null
   const qrSlug = typeof body?.qr_slug === 'string' ? body.qr_slug : null
   const confirmedCod = body?.confirmed_cod === true
 
-  if (!items?.length) return NextResponse.json({ error: 'Cart is empty' }, { status: 400 })
+  if (!items) return NextResponse.json({ error: 'Cart is empty or invalid' }, { status: 400 })
   if (!deliveryAddress) return NextResponse.json({ error: 'Delivery address is required' }, { status: 400 })
   if (!confirmedCod) {
     return NextResponse.json({ error: 'Cash-on-delivery must be confirmed' }, { status: 400 })
@@ -64,6 +66,24 @@ export async function POST(request: NextRequest) {
 
   try {
     const user = await getOrCreateUser(telegramUser)
+
+    // Caps a single customer's in-flight orders — without this, a confused
+    // customer double-tapping checkout (or a stolen/replayed initData, see
+    // the auth_date expiry above) can spam the owner's Telegram with
+    // duplicate order notifications and, for scheduled orders, occupy every
+    // remaining slot for the day.
+    const { count: activeOrderCount } = await supabaseAdmin
+      .from('orders')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .in('status', ACTIVE_ORDER_STATUSES)
+
+    if ((activeOrderCount ?? 0) >= MAX_ACTIVE_ORDERS_PER_USER) {
+      return NextResponse.json(
+        { error: 'You already have several orders in progress — please wait for one to complete before placing another.' },
+        { status: 429 }
+      )
+    }
 
     let qrCodeId: string | null = null
     if (qrSlug) {
