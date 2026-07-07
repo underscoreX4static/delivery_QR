@@ -1,6 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabase'
 import { calculatePayout } from '@/lib/calculations'
-import { getBrisbaneDayBounds, getBrisbaneDateString } from '@/lib/store-hours'
+import { getBrisbaneDateString } from '@/lib/store-hours'
 import { notifyOwner, sendMessage } from '@/lib/telegram'
 import type { OrderItem, Settlement } from '@/types/index'
 
@@ -18,28 +18,35 @@ async function costOfGoodsForOrder(orderId: string): Promise<number> {
 }
 
 /**
- * Daily driver settlement: all delivered orders for the driver today that
- * aren't already part of another settlement. Notifies the driver via
- * Telegram with confirm/deny buttons (step 4-5 of the settlement flow).
+ * Driver settlement: every delivered order for the driver that isn't already
+ * part of another settlement. Notifies the driver via Telegram with
+ * confirm/deny buttons (step 4-5 of the settlement flow).
+ *
+ * Deliberately not scoped to "today" by created_at — an order created late
+ * one night and delivered just after midnight would otherwise fall between
+ * two days' settlements and never get reconciled. The already-settled check
+ * is what prevents double-counting, so any outstanding delivered order is
+ * fair game regardless of when it was placed. In practice the owner doesn't
+ * settle daily — cash gets collected from a driver every few days — so
+ * period_start/period_end are set from the actual span of included orders
+ * rather than always being "today", or a multi-day settlement would
+ * misleadingly display as a single day.
  */
 export async function createDriverSettlement(driverId: string, proposedBy: string): Promise<Result> {
   const { data: driver } = await supabaseAdmin.from('drivers').select('*').eq('id', driverId).single()
   if (!driver) return { ok: false, error: 'Driver not found' }
 
-  const { start, end } = getBrisbaneDayBounds()
   const { data: orders } = await supabaseAdmin
     .from('orders')
     .select('*')
     .eq('driver_id', driverId)
     .eq('status', 'delivered')
-    .gte('created_at', start.toISOString())
-    .lt('created_at', end.toISOString())
 
   const settled = await alreadySettledOrderIds()
   const eligibleOrders = (orders ?? []).filter((o) => !settled.has(o.id))
 
   if (eligibleOrders.length === 0) {
-    return { ok: false, error: 'No unsettled delivered orders for this driver today' }
+    return { ok: false, error: 'No unsettled delivered orders for this driver' }
   }
 
   let totalCash = 0
@@ -59,15 +66,18 @@ export async function createDriverSettlement(driverId: string, proposedBy: strin
     payoutAmount += payout.driverPayout
   }
 
-  const today = getBrisbaneDateString()
+  const orderDates = eligibleOrders.map((o) => getBrisbaneDateString(new Date(o.created_at))).sort()
+  const periodStart = orderDates[0]
+  const periodEnd = orderDates[orderDates.length - 1]
+
   const { data: settlement, error } = await supabaseAdmin
     .from('settlements')
     .insert({
       type: 'driver',
       status: 'proposed',
       driver_id: driverId,
-      period_start: today,
-      period_end: today,
+      period_start: periodStart,
+      period_end: periodEnd,
       total_cash: round2(totalCash),
       payout_amount: round2(payoutAmount),
       proposed_by: proposedBy,
@@ -81,9 +91,11 @@ export async function createDriverSettlement(driverId: string, proposedBy: strin
     .from('settlement_orders')
     .insert(eligibleOrders.map((o) => ({ settlement_id: settlement.id, order_id: o.id })))
 
+  const periodLabel = periodStart === periodEnd ? `on ${periodStart}` : `${periodStart} to ${periodEnd}`
+
   await sendMessage(
     driver.telegram_id,
-    `💰 Daily settlement — you collected $${settlement.total_cash.toFixed(2)} today (${eligibleOrders.length} deliveries). Your share: $${settlement.payout_amount.toFixed(2)}. Do you confirm?`,
+    `💰 Settlement — you collected $${settlement.total_cash.toFixed(2)} ${periodLabel} (${eligibleOrders.length} deliveries). Your share: $${settlement.payout_amount.toFixed(2)}. Do you confirm?`,
     {
       reply_markup: {
         inline_keyboard: [

@@ -191,6 +191,15 @@ export function validateTelegramInitData(
 
     if (computedHash !== hash) return null
 
+    // A valid signature only proves Telegram issued this initData at some
+    // point — not that it's still the current session. Without an expiry, a
+    // captured initData (proxy logs, a compromised device) would let someone
+    // impersonate that customer forever. The Mini App gets a fresh initData
+    // every time it's opened from Telegram, so legitimate use is unaffected.
+    const authDate = Number(params.get('auth_date'))
+    const MAX_AGE_SECONDS = 24 * 60 * 60
+    if (!authDate || Date.now() / 1000 - authDate > MAX_AGE_SECONDS) return null
+
     const userJson = params.get('user')
     if (!userJson) return null
     const user = JSON.parse(userJson)

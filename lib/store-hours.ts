@@ -1,4 +1,4 @@
-import { addMinutes, startOfMonth, startOfWeek } from 'date-fns'
+import { startOfMonth, startOfWeek } from 'date-fns'
 
 // Brisbane is UTC+10 year-round — Queensland does not observe daylight saving.
 export const BRISBANE_OFFSET_MINUTES = 10 * 60
@@ -21,14 +21,6 @@ function startOfBrisbaneDay(wallClockDate: Date): Date {
   const d = new Date(wallClockDate)
   d.setUTCHours(0, 0, 0, 0)
   return d
-}
-
-/** UTC instant bounds of "today" in Brisbane wall-clock time — used for daily driver settlements. */
-export function getBrisbaneDayBounds(now: Date = new Date()): { start: Date; end: Date } {
-  const wallClockNow = toBrisbaneWallClock(now)
-  const dayStart = startOfBrisbaneDay(wallClockNow)
-  const dayEnd = addMinutes(dayStart, 24 * 60)
-  return { start: fromBrisbaneWallClock(dayStart), end: fromBrisbaneWallClock(dayEnd) }
 }
 
 /**
