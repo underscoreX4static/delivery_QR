@@ -125,6 +125,18 @@ export async function POST(request: NextRequest) {
       .select('*')
       .single()
 
+    if (orderError?.code === '23505') {
+      // Belt-and-suspenders: the app-level check above closes almost all of
+      // the race window, but the DB's partial unique index on
+      // (scheduled_at) WHERE status <> 'cancelled' is the actual guarantee —
+      // this is what catches the rare case where two requests passed that
+      // check at the same instant.
+      return NextResponse.json(
+        { error: 'That time slot was just taken — please pick another.' },
+        { status: 409 }
+      )
+    }
+
     if (orderError || !order) throw new Error(orderError?.message ?? 'Order insert failed')
 
     const { error: itemsError } = await supabaseAdmin.from('order_items').insert(
