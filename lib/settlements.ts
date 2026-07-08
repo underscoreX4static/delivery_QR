@@ -128,21 +128,31 @@ export async function createDriverSettlement(driverId: string, proposedBy: strin
       : 'No new deliveries this settlement.'
   const bonusLine = grantsTotal > 0 ? `\n🎁 Bonuses: $${round2(grantsTotal).toFixed(2)} (${grants.length}).` : ''
 
-  await sendMessage(
-    driver.telegram_id,
-    `💰 Settlement — ${cashLine}${bonusLine}\n\n*Total due: $${round2(payoutAmount).toFixed(2)}.* Do you confirm?`,
-    {
-      parse_mode: 'Markdown',
-      reply_markup: {
-        inline_keyboard: [
-          [
-            { text: '✅ Confirm', callback_data: `settle_confirm:${settlement.id}` },
-            { text: '❌ Dispute', callback_data: `settle_deny:${settlement.id}` },
+  // Plain text (no parse_mode) so no special character in the amounts/labels
+  // can make Telegram reject the message. And never let a delivery failure
+  // (blocked bot, unreachable id) throw — the settlement is already persisted,
+  // so we surface a warning to the owner instead of 500-ing the request.
+  try {
+    await sendMessage(
+      driver.telegram_id,
+      `💰 Settlement — ${cashLine}${bonusLine}\n\nTotal due: $${round2(payoutAmount).toFixed(2)}. Do you confirm?`,
+      {
+        reply_markup: {
+          inline_keyboard: [
+            [
+              { text: '✅ Confirm', callback_data: `settle_confirm:${settlement.id}` },
+              { text: '❌ Dispute', callback_data: `settle_deny:${settlement.id}` },
+            ],
           ],
-        ],
-      },
-    }
-  )
+        },
+      }
+    )
+  } catch (err) {
+    console.error(`Settlement ${settlement.id} created but driver notification failed:`, err)
+    await notifyOwner(
+      `⚠️ Settlement #${settlement.id.slice(0, 8)} created, but I couldn't message the driver on Telegram. Ask them to open the bot (/start), then resend.`
+    ).catch(() => {})
+  }
 
   return { ok: true, settlement: settlement as Settlement }
 }
