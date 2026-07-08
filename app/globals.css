@@ -8,14 +8,49 @@
  * Pinned to light so rendering is consistent regardless of viewer theme.
  */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f6f1ea;
+  --foreground: #2a2118;
   color-scheme: light;
+
+  /* --- Design tokens: "Maison de parfum × cheminée" ------------------------
+   * Warm, raw palette — burnt terracotta accent, amber/honey and oxblood for
+   * status, warm linen surfaces instead of cold white/gray. Each becomes a
+   * real Tailwind utility via @theme inline below — e.g. `bg-primary`,
+   * `text-primary`, `border-primary`, and `bg-primary/10` (10% opacity).
+   */
+
+  /* Surfaces */
+  --page-bg: #f6f1ea; /* warm linen — app background behind cards */
+  --surface: #fffcf7; /* warm paper white — card/panel background */
+  --border: #e5d8c8; /* warm sand — default border color */
+
+  /* Text */
+  --muted: #8c7a66; /* warm taupe — secondary/label text */
+
+  /* Brand */
+  --primary: #b54a2c; /* burnt terracotta/ember — primary buttons, links, active nav */
+  --primary-foreground: #fbf3ea; /* warm cream text on primary */
+
+  /* Semantic status (badges, alerts, stat highlighting) */
+  --success: #6c7a4c; /* moss/olive — paid, confirmed, active */
+  --warning: #c6892c; /* honey amber — pending, awaiting action */
+  --danger: #8f3529; /* oxblood/brick — cancel, overdue, negative balance */
+  --info: #5e6e6b; /* warm slate — neutral informational badge */
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-page-bg: var(--page-bg);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
+  --color-muted: var(--muted);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }

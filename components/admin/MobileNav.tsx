@@ -16,7 +16,7 @@ export function MobileNav({ userEmail }: { userEmail: string }) {
 
   return (
     <div className="sm:hidden">
-      <header className="flex items-center justify-between border-b border-neutral-200 bg-white px-4 py-3">
+      <header className="flex items-center justify-between border-b border-border bg-surface px-4 py-3">
         <button
           onClick={() => setOpen(true)}
           aria-label="Open menu"
@@ -30,11 +30,11 @@ export function MobileNav({ userEmail }: { userEmail: string }) {
 
       {open && (
         <div className="fixed inset-0 z-50 flex">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
-          <div className="relative flex h-full w-72 max-w-[85vw] flex-col justify-between bg-white p-4">
+          <div className="absolute inset-0 bg-foreground/40" onClick={() => setOpen(false)} />
+          <div className="relative flex h-full w-72 max-w-[85vw] flex-col justify-between bg-surface p-4">
             <div>
               <div className="mb-6 flex items-center justify-between px-1">
-                <h1 className="text-lg font-semibold">HAZE Admin</h1>
+                <h1 className="text-lg font-semibold text-foreground">HAZE Admin</h1>
                 <button
                   onClick={() => setOpen(false)}
                   aria-label="Close menu"
@@ -45,7 +45,7 @@ export function MobileNav({ userEmail }: { userEmail: string }) {
               </div>
               <AdminNav />
             </div>
-            <p className="truncate px-3 py-2 text-xs text-neutral-600">{userEmail}</p>
+            <p className="truncate px-3 py-2 text-xs text-muted">{userEmail}</p>
           </div>
         </div>
       )}

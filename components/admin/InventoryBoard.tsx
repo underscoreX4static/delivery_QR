@@ -82,12 +82,12 @@ export function InventoryBoard() {
           <button
             key={f}
             onClick={() => setFilter(f)}
-            className={`rounded-lg px-3 py-1.5 text-xs font-medium ${filter === f ? 'bg-black text-white' : 'bg-neutral-100 text-neutral-700'}`}
+            className={`rounded-lg px-3 py-1.5 text-xs font-medium ${filter === f ? 'bg-primary text-primary-foreground' : 'bg-border text-muted hover:text-foreground'}`}
           >
             {f === 'all' ? 'All' : f === 'restock' ? 'Restock needed' : f === 'bestsellers' ? 'Bestsellers' : 'Slow movers'}
           </button>
         ))}
-        <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="rounded border border-neutral-300 px-2 py-1 text-xs">
+        <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="rounded border border-border bg-surface px-2 py-1 text-xs text-foreground focus:border-primary focus:outline-none">
           <option value="">All categories</option>
           {categories.map((c) => (
             <option key={c.id} value={c.id}>
@@ -100,15 +100,15 @@ export function InventoryBoard() {
       {/* Mobile: card list */}
       <div className="flex flex-col gap-2 sm:hidden">
         {filteredRows.map((row) => (
-          <div key={row.id} className="rounded-xl border border-neutral-200 bg-white p-4 text-xs">
+          <div key={row.id} className="rounded-xl border border-border bg-surface p-4 text-xs">
             <div className="flex items-start justify-between gap-2">
               <div>
                 <p className="text-sm font-medium">{row.name}</p>
-                <p className="text-neutral-600">{row.brand}</p>
+                <p className="text-muted">{row.brand}</p>
               </div>
               <span>{STATUS_BADGE[row.status]}</span>
             </div>
-            <div className="mt-2 grid grid-cols-2 gap-1 text-neutral-600">
+            <div className="mt-2 grid grid-cols-2 gap-1 text-muted">
               <span>Tier: {TIER_BADGE[row.velocity_tier]}</span>
               <span>Stock: {row.stock_qty}</span>
               <span>Days left: {row.days_remaining !== null ? row.days_remaining.toFixed(1) : '—'}</span>
@@ -116,18 +116,18 @@ export function InventoryBoard() {
               <span>Profit 30d: ${row.profit_30d.toFixed(2)}</span>
               <span>Revenue 30d: ${row.revenue_30d.toFixed(2)}</span>
             </div>
-            <a href={`/admin/products?product=${row.id}`} className="mt-2 block rounded-lg bg-neutral-100 py-2 text-center font-medium text-blue-600">
+            <a href={`/admin/products?product=${row.id}`} className="mt-2 block rounded-lg bg-border py-2 text-center font-medium text-primary hover:bg-border/70">
               ➕ New batch
             </a>
           </div>
         ))}
-        {filteredRows.length === 0 && <p className="text-sm text-neutral-600">No products match this filter.</p>}
+        {filteredRows.length === 0 && <p className="text-sm text-muted">No products match this filter.</p>}
       </div>
 
       {/* Desktop: table */}
-      <div className="hidden overflow-x-auto rounded-xl border border-neutral-200 bg-white sm:block">
+      <div className="hidden overflow-x-auto rounded-xl border border-border bg-surface sm:block">
         <table className="w-full text-left text-xs">
-          <thead className="bg-neutral-50 text-neutral-600">
+          <thead className="bg-page-bg text-muted">
             <tr>
               <th className="px-3 py-2">Product</th>
               <th className="px-3 py-2">Status</th>
@@ -142,10 +142,10 @@ export function InventoryBoard() {
           </thead>
           <tbody>
             {filteredRows.map((row) => (
-              <tr key={row.id} className="border-t border-neutral-100">
+              <tr key={row.id} className="border-t border-border">
                 <td className="px-3 py-2">
                   <p className="font-medium">{row.name}</p>
-                  <p className="text-neutral-600">{row.brand}</p>
+                  <p className="text-muted">{row.brand}</p>
                 </td>
                 <td className="px-3 py-2">{STATUS_BADGE[row.status]}</td>
                 <td className="px-3 py-2">{TIER_BADGE[row.velocity_tier]}</td>
@@ -155,7 +155,7 @@ export function InventoryBoard() {
                 <td className="px-3 py-2">${row.profit_30d.toFixed(2)}</td>
                 <td className="px-3 py-2">${row.revenue_30d.toFixed(2)}</td>
                 <td className="px-3 py-2">
-                  <a href={`/admin/products?product=${row.id}`} className="text-blue-600">
+                  <a href={`/admin/products?product=${row.id}`} className="text-primary">
                     ➕ New batch
                   </a>
                 </td>
@@ -163,7 +163,7 @@ export function InventoryBoard() {
             ))}
             {filteredRows.length === 0 && (
               <tr>
-                <td colSpan={9} className="px-3 py-4 text-center text-neutral-600">
+                <td colSpan={9} className="px-3 py-4 text-center text-muted">
                   No products match this filter.
                 </td>
               </tr>
@@ -183,8 +183,8 @@ export function InventoryBoard() {
 
 function StatTile({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-xl border border-neutral-200 bg-white p-4">
-      <p className="text-xs text-neutral-600">{label}</p>
+    <div className="rounded-xl border border-border bg-surface p-4">
+      <p className="text-xs text-muted">{label}</p>
       <p className="text-xl font-semibold">{value}</p>
     </div>
   )
@@ -192,13 +192,13 @@ function StatTile({ label, value }: { label: string; value: number }) {
 
 function StrategyColumn({ title, rows }: { title: string; rows: InventoryRow[] }) {
   return (
-    <div className="rounded-xl border border-neutral-200 bg-white p-4">
+    <div className="rounded-xl border border-border bg-surface p-4">
       <h3 className="mb-2 text-sm font-semibold">{title}</h3>
       <ul className="flex flex-col gap-1 text-xs">
         {rows.map((r) => (
           <li key={r.id}>{r.name}</li>
         ))}
-        {rows.length === 0 && <li className="text-neutral-600">None right now.</li>}
+        {rows.length === 0 && <li className="text-muted">None right now.</li>}
       </ul>
     </div>
   )

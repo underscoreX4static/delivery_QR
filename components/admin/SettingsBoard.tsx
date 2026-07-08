@@ -36,7 +36,7 @@ export function SettingsBoard() {
     fetch('/api/admin/settings').then((r) => r.json()).then((d) => setSettings(d.settings))
   }, [])
 
-  if (!settings) return <p className="text-sm text-neutral-600">Loading…</p>
+  if (!settings) return <p className="text-sm text-muted">Loading…</p>
 
   const update = <K extends keyof StoreSettings>(key: K, value: StoreSettings[K]) => {
     setSettings({ ...settings, [key]: value })
@@ -64,30 +64,30 @@ export function SettingsBoard() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="rounded-xl border border-neutral-200 bg-white p-4">
-        <h2 className="mb-3 text-sm font-semibold">Store hours (per day)</h2>
+      <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
+        <h2 className="mb-3 text-sm font-semibold text-foreground">Store hours (per day)</h2>
         <div className="flex flex-col gap-2">
           {DAY_LABELS.map((label, day) => (
             <div key={day} className="flex items-center gap-2 text-xs">
-              <span className="w-24 text-neutral-600">{label}</span>
+              <span className="w-24 text-muted">{label}</span>
               <input
                 type="number"
                 min={0}
                 max={24}
                 value={settings.weekHours[day]?.open ?? 10}
                 onChange={(e) => updateDay(day, 'open', Number(e.target.value))}
-                className="w-16 rounded border border-neutral-300 px-2 py-1"
+                className="w-16 rounded border border-border bg-surface px-2 py-1 text-foreground focus:border-primary focus:outline-none"
               />
-              <span className="text-neutral-600">to</span>
+              <span className="text-muted">to</span>
               <input
                 type="number"
                 min={0}
                 max={24}
                 value={settings.weekHours[day]?.close ?? 24}
                 onChange={(e) => updateDay(day, 'close', Number(e.target.value))}
-                className="w-16 rounded border border-neutral-300 px-2 py-1"
+                className="w-16 rounded border border-border bg-surface px-2 py-1 text-foreground focus:border-primary focus:outline-none"
               />
-              <span className="text-neutral-600">(24h, 24 = midnight)</span>
+              <span className="text-muted">(24h, 24 = midnight)</span>
             </div>
           ))}
         </div>
@@ -97,25 +97,25 @@ export function SettingsBoard() {
             <select
               value={settings.forceStatus ?? ''}
               onChange={(e) => update('forceStatus', (e.target.value || null) as StoreSettings['forceStatus'])}
-              className="w-40 rounded border border-neutral-300 px-2 py-1 text-xs"
+              className="w-40 rounded border border-border bg-surface px-2 py-1 text-xs text-foreground focus:border-primary focus:outline-none"
             >
               <option value="">Auto (use hours above)</option>
               <option value="open">Force open</option>
               <option value="closed">Force closed</option>
             </select>
           </Field>
-          <label className="flex items-center gap-2 text-xs text-neutral-600">
+          <label className="flex items-center gap-2 text-xs text-muted">
             <input type="checkbox" checked={broadcast} onChange={(e) => setBroadcast(e.target.checked)} />
             Notify all customers via Telegram when the override changes
           </label>
         </div>
       </div>
 
-      <div className="rounded-xl border border-neutral-200 bg-white p-4">
-        <h2 className="mb-3 text-sm font-semibold">Delivery & discounts</h2>
+      <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
+        <h2 className="mb-3 text-sm font-semibold text-foreground">Delivery & discounts</h2>
         <div className="flex flex-wrap gap-3">
           <Field label="Delivery fee ($)">
-            <input type="number" step="0.01" value={settings.deliveryFee} onChange={(e) => update('deliveryFee', Number(e.target.value))} className="w-28 rounded border border-neutral-300 px-2 py-1 text-xs" />
+            <input type="number" step="0.01" value={settings.deliveryFee} onChange={(e) => update('deliveryFee', Number(e.target.value))} className="w-28 rounded border border-border bg-surface px-2 py-1 text-xs text-foreground focus:border-primary focus:outline-none" />
           </Field>
           <Field label="Free delivery threshold ($)">
             <input
@@ -123,7 +123,7 @@ export function SettingsBoard() {
               step="0.01"
               value={settings.freeDeliveryThreshold}
               onChange={(e) => update('freeDeliveryThreshold', Number(e.target.value))}
-              className="w-28 rounded border border-neutral-300 px-2 py-1 text-xs"
+              className="w-28 rounded border border-border bg-surface px-2 py-1 text-xs text-foreground focus:border-primary focus:outline-none"
             />
           </Field>
           <Field label="Tier 1 threshold ($)">
@@ -132,7 +132,7 @@ export function SettingsBoard() {
               step="0.01"
               value={settings.discountThreshold}
               onChange={(e) => update('discountThreshold', Number(e.target.value))}
-              className="w-28 rounded border border-neutral-300 px-2 py-1 text-xs"
+              className="w-28 rounded border border-border bg-surface px-2 py-1 text-xs text-foreground focus:border-primary focus:outline-none"
             />
           </Field>
           <Field label="Tier 1 rate (%)">
@@ -141,7 +141,7 @@ export function SettingsBoard() {
               step="0.1"
               value={settings.discountRate * 100}
               onChange={(e) => update('discountRate', Number(e.target.value) / 100)}
-              className="w-24 rounded border border-neutral-300 px-2 py-1 text-xs"
+              className="w-24 rounded border border-border bg-surface px-2 py-1 text-xs text-foreground focus:border-primary focus:outline-none"
             />
           </Field>
           <Field label="Tier 2 threshold ($)">
@@ -150,7 +150,7 @@ export function SettingsBoard() {
               step="0.01"
               value={settings.discountThreshold2}
               onChange={(e) => update('discountThreshold2', Number(e.target.value))}
-              className="w-28 rounded border border-neutral-300 px-2 py-1 text-xs"
+              className="w-28 rounded border border-border bg-surface px-2 py-1 text-xs text-foreground focus:border-primary focus:outline-none"
             />
           </Field>
           <Field label="Tier 2 rate (%)">
@@ -159,81 +159,81 @@ export function SettingsBoard() {
               step="0.1"
               value={settings.discountRate2 * 100}
               onChange={(e) => update('discountRate2', Number(e.target.value) / 100)}
-              className="w-24 rounded border border-neutral-300 px-2 py-1 text-xs"
+              className="w-24 rounded border border-border bg-surface px-2 py-1 text-xs text-foreground focus:border-primary focus:outline-none"
             />
           </Field>
         </div>
       </div>
 
-      <div className="rounded-xl border border-neutral-200 bg-white p-4">
-        <h2 className="mb-3 text-sm font-semibold">Inventory intelligence</h2>
+      <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
+        <h2 className="mb-3 text-sm font-semibold text-foreground">Inventory intelligence</h2>
         <Field label="Reorder days default">
           <input
             type="number"
             value={settings.reorderDaysDefault}
             onChange={(e) => update('reorderDaysDefault', Number(e.target.value))}
-            className="w-24 rounded border border-neutral-300 px-2 py-1 text-xs"
+            className="w-24 rounded border border-border bg-surface px-2 py-1 text-xs text-foreground focus:border-primary focus:outline-none"
           />
         </Field>
       </div>
 
-      <div className="rounded-xl border border-neutral-200 bg-white p-4">
-        <h2 className="mb-3 text-sm font-semibold">Driver bonus pool</h2>
+      <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
+        <h2 className="mb-3 text-sm font-semibold text-foreground">Driver bonus pool</h2>
         <Field label="Share of your net profit set aside (%)">
           <input
             type="number"
             step="0.1"
             value={settings.bonusPoolRate * 100}
             onChange={(e) => update('bonusPoolRate', Number(e.target.value) / 100)}
-            className="w-24 rounded border border-neutral-300 px-2 py-1 text-xs"
+            className="w-24 rounded border border-border bg-surface px-2 py-1 text-xs text-foreground focus:border-primary focus:outline-none"
           />
         </Field>
-        <p className="mt-2 text-xs text-neutral-600">
+        <p className="mt-2 text-xs text-muted">
           On every delivered order handled by a non-owner driver, this share of your net profit is set aside into one
           shared pool budget. You then grant fixed bonuses from that budget to any driver(s) from the Drivers page —
           paid out with their settlement. It comes out of your take-home; see the split on{' '}
-          <a href="/admin/finance" className="underline">
+          <a href="/admin/finance" className="text-primary underline">
             /admin/finance
           </a>
           .
         </p>
       </div>
 
-      <div className="rounded-xl border border-neutral-200 bg-white p-4">
-        <h2 className="mb-3 text-sm font-semibold">Customer referrals</h2>
+      <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
+        <h2 className="mb-3 text-sm font-semibold text-foreground">Customer referrals</h2>
         <Field label="Reward per referral ($, each side)">
           <input
             type="number"
             step="0.5"
             value={settings.referralRewardAmount}
             onChange={(e) => update('referralRewardAmount', Number(e.target.value))}
-            className="w-24 rounded border border-neutral-300 px-2 py-1 text-xs"
+            className="w-24 rounded border border-border bg-surface px-2 py-1 text-xs text-foreground focus:border-primary focus:outline-none"
           />
         </Field>
-        <p className="mt-2 text-xs text-neutral-600">
+        <p className="mt-2 text-xs text-muted">
           Credited to both the referrer and the new customer once you approve a pending referral in{' '}
-          <a href="/admin/referrals" className="underline">
+          <a href="/admin/referrals" className="text-primary underline">
             /admin/referrals
           </a>
           .
         </p>
       </div>
 
-      <div className="rounded-xl border border-neutral-200 bg-white p-4">
-        <h2 className="mb-3 text-sm font-semibold">Treasury baseline</h2>
+      <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
+        <h2 className="mb-3 text-sm font-semibold text-foreground">Treasury baseline</h2>
         <Field label="Cash on hand ($)">
           <input
             type="number"
             step="1"
             value={settings.startingCash}
             onChange={(e) => update('startingCash', Number(e.target.value))}
-            className="w-32 rounded border border-neutral-300 px-2 py-1 text-xs"
+            className="w-32 rounded border border-border bg-surface px-2 py-1 text-xs text-foreground focus:border-primary focus:outline-none"
           />
         </Field>
-        <p className="mt-2 text-xs text-neutral-600">
+        <p className="mt-2 text-xs text-muted">
           Your real liquid cash right now — the app can&apos;t see your bank, so it starts from this figure and adjusts
           by what it watches flow through (sales, payouts, credits). Powers the runway on{' '}
-          <a href="/admin/finance" className="underline">
+          <a href="/admin/finance" className="text-primary underline">
             /admin/finance
           </a>
           . Re-enter it whenever it drifts from reality.
@@ -241,10 +241,10 @@ export function SettingsBoard() {
       </div>
 
       <div className="flex items-center gap-3">
-        <button onClick={save} disabled={saving} className="rounded-lg bg-black px-4 py-2 text-xs font-medium text-white disabled:opacity-50">
+        <button onClick={save} disabled={saving} className="rounded-lg bg-primary px-4 py-2 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50">
           {saving ? 'Saving…' : 'Save settings'}
         </button>
-        {savedAt && <span className="text-xs text-neutral-600">Saved.</span>}
+        {savedAt && <span className="text-xs text-muted">Saved.</span>}
       </div>
     </div>
   )
@@ -252,7 +252,7 @@ export function SettingsBoard() {
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <label className="flex flex-col gap-1 text-[10px] font-medium uppercase text-neutral-600">
+    <label className="flex flex-col gap-1 text-[10px] font-medium uppercase text-muted">
       {label}
       {children}
     </label>

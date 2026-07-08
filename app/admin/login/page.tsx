@@ -30,40 +30,40 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-neutral-50 p-6">
+    <div className="flex min-h-dvh items-center justify-center bg-page-bg p-6">
       <form
         onSubmit={handleSubmit}
-        className="flex w-full max-w-sm flex-col gap-4 rounded-xl border border-neutral-200 bg-white p-6 shadow-sm"
+        className="flex w-full max-w-sm flex-col gap-4 rounded-xl border border-border bg-surface p-6 shadow-sm"
       >
         <div>
-          <h1 className="text-lg font-semibold">HAZE Admin</h1>
-          <p className="text-sm text-neutral-600">Sign in to manage the store.</p>
+          <h1 className="text-lg font-semibold text-foreground">HAZE Admin</h1>
+          <p className="text-sm text-muted">Sign in to manage the store.</p>
         </div>
-        <label className="flex flex-col gap-1 text-sm font-medium">
+        <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
           Email
           <input
             required
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="rounded-lg border border-neutral-300 px-3 py-2 text-base"
+            className="rounded-lg border border-border bg-surface px-3 py-2 text-base focus:border-primary focus:outline-none"
           />
         </label>
-        <label className="flex flex-col gap-1 text-sm font-medium">
+        <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
           Password
           <input
             required
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="rounded-lg border border-neutral-300 px-3 py-2 text-base"
+            className="rounded-lg border border-border bg-surface px-3 py-2 text-base focus:border-primary focus:outline-none"
           />
         </label>
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm text-danger">{error}</p>}
         <button
           type="submit"
           disabled={submitting}
-          className="rounded-lg bg-black py-2.5 text-center font-medium text-white disabled:opacity-50"
+          className="rounded-lg bg-primary py-2.5 text-center font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
         >
           {submitting ? 'Signing in…' : 'Sign in'}
         </button>

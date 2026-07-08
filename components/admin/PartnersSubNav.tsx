@@ -12,17 +12,17 @@ export function PartnersSubNav() {
   const pathname = usePathname()
 
   return (
-    <div className="mb-4 flex gap-1 border-b border-neutral-200">
+    <div className="mb-4 flex gap-1 border-b border-border">
       {TABS.map((tab) => {
         const active = pathname?.startsWith(tab.href)
         return (
           <Link
             key={tab.href}
             href={tab.href}
-            className={`-mb-px border-b-2 px-4 py-2 text-sm font-medium ${
+            className={`-mb-px border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
               active
-                ? 'border-black text-black'
-                : 'border-transparent text-neutral-500 hover:text-neutral-800'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted hover:text-foreground'
             }`}
           >
             {tab.label}

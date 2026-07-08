@@ -59,10 +59,10 @@ export function QrCodesBoard() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="rounded-xl border border-neutral-200 bg-white p-4">
+      <div className="rounded-xl border border-border bg-surface p-4">
         <h2 className="mb-3 text-sm font-semibold">Generate QR code</h2>
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-          <select value={partnerId} onChange={(e) => setPartnerId(e.target.value)} className="rounded-lg border border-neutral-300 px-3 py-2 text-base sm:text-xs">
+          <select value={partnerId} onChange={(e) => setPartnerId(e.target.value)} className="rounded-lg border border-border bg-surface px-3 py-2 text-base text-foreground focus:border-primary focus:outline-none sm:text-xs">
             <option value="">Select commercial…</option>
             {partners.map((p) => (
               <option key={p.id} value={p.id}>
@@ -74,24 +74,24 @@ export function QrCodesBoard() {
             placeholder="Label (optional)"
             value={label}
             onChange={(e) => setLabel(e.target.value)}
-            className="rounded-lg border border-neutral-300 px-3 py-2 text-base sm:text-xs"
+            className="rounded-lg border border-border bg-surface px-3 py-2 text-base text-foreground focus:border-primary focus:outline-none sm:text-xs"
           />
           <button
             onClick={create}
             disabled={creating || !partnerId}
-            className="w-full rounded-lg bg-black py-3 text-sm font-medium text-white disabled:opacity-50 sm:w-auto sm:px-3 sm:py-1.5 sm:text-xs"
+            className="w-full rounded-lg bg-primary py-3 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50 sm:w-auto sm:px-3 sm:py-1.5 sm:text-xs"
           >
             Generate
           </button>
         </div>
-        {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+        {error && <p className="mt-2 text-xs text-danger">{error}</p>}
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {qrCodes.map((qr) => (
           <QrCard key={qr.id} qr={qr} onToggleActive={() => toggleActive(qr)} />
         ))}
-        {qrCodes.length === 0 && <p className="text-sm text-neutral-600">No QR codes yet.</p>}
+        {qrCodes.length === 0 && <p className="text-sm text-muted">No QR codes yet.</p>}
       </div>
     </div>
   )
@@ -114,45 +114,45 @@ function QrCard({ qr, onToggleActive }: { qr: AdminQrCode; onToggleActive: () =>
   }
 
   return (
-    <div className="space-y-3 rounded-2xl border border-neutral-100 bg-white p-4 shadow-sm">
+    <div className="space-y-3 rounded-2xl border border-border bg-surface p-4 shadow-sm">
       <div className="flex justify-center">
         {dataUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={dataUrl} alt={qr.slug} className="h-40 w-40 rounded-xl" />
         ) : (
-          <div className="h-40 w-40 animate-pulse rounded-xl bg-neutral-100" />
+          <div className="h-40 w-40 animate-pulse rounded-xl bg-border" />
         )}
       </div>
       <div className="text-center">
-        <p className="font-semibold text-neutral-900">{qr.partners?.name ?? 'Unknown commercial'}</p>
-        <p className="mt-0.5 font-mono text-xs text-neutral-600">{qr.label ?? qr.slug}</p>
+        <p className="font-semibold text-foreground">{qr.partners?.name ?? 'Unknown commercial'}</p>
+        <p className="mt-0.5 font-mono text-xs text-muted">{qr.label ?? qr.slug}</p>
       </div>
       <div className="grid grid-cols-3 gap-2 text-center">
-        <div className="rounded-xl bg-neutral-50 py-2">
-          <p className="text-lg font-bold text-neutral-900">{qr.total_scans}</p>
-          <p className="text-xs text-neutral-600">Scans</p>
+        <div className="rounded-xl bg-page-bg py-2">
+          <p className="text-lg font-bold text-foreground">{qr.total_scans}</p>
+          <p className="text-xs text-muted">Scans</p>
         </div>
-        <div className="rounded-xl bg-neutral-50 py-2">
-          <p className="text-lg font-bold text-neutral-900">{qr.unique_users}</p>
-          <p className="text-xs text-neutral-600">Users</p>
+        <div className="rounded-xl bg-page-bg py-2">
+          <p className="text-lg font-bold text-foreground">{qr.unique_users}</p>
+          <p className="text-xs text-muted">Users</p>
         </div>
-        <div className="rounded-xl bg-neutral-50 py-2">
-          <p className="text-lg font-bold text-neutral-900">{qr.orders_generated}</p>
-          <p className="text-xs text-neutral-600">Orders</p>
+        <div className="rounded-xl bg-page-bg py-2">
+          <p className="text-lg font-bold text-foreground">{qr.orders_generated}</p>
+          <p className="text-xs text-muted">Orders</p>
         </div>
       </div>
       <div className="flex gap-2">
         <a
           href={`/api/admin/qr-codes/${qr.id}/png`}
-          className="flex-1 rounded-xl bg-blue-600 py-2.5 text-center text-xs font-medium text-white"
+          className="flex-1 rounded-xl bg-primary py-2.5 text-center text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90"
         >
           ⬇ Download
         </a>
-        <button onClick={copyLink} className="flex-1 rounded-xl bg-neutral-100 py-2.5 text-xs font-medium text-neutral-700">
+        <button onClick={copyLink} className="flex-1 rounded-xl bg-border py-2.5 text-xs font-medium text-foreground hover:bg-border/70">
           {copied ? '✓ Copied' : '🔗 Copy link'}
         </button>
       </div>
-      <button onClick={onToggleActive} className="w-full rounded-xl bg-neutral-50 py-2 text-xs font-medium text-neutral-600">
+      <button onClick={onToggleActive} className="w-full rounded-xl bg-page-bg py-2 text-xs font-medium text-muted hover:text-foreground">
         {qr.is_active ? 'Deactivate' : 'Activate'}
       </button>
     </div>

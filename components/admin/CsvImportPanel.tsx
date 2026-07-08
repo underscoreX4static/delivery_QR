@@ -81,9 +81,9 @@ export function CsvImportPanel({ onImported }: { onImported: () => void }) {
   }
 
   return (
-    <div className="rounded-xl border border-neutral-200 bg-white p-4">
+    <div className="rounded-xl border border-border bg-surface p-4">
       <h2 className="text-sm font-semibold">CSV bulk import</h2>
-      <p className="mt-1 text-xs text-neutral-600">
+      <p className="mt-1 text-xs text-muted">
         Headers: {EXPECTED_HEADERS.join(', ')}
       </p>
       <input
@@ -93,13 +93,13 @@ export function CsvImportPanel({ onImported }: { onImported: () => void }) {
         className="mt-2 text-xs"
       />
 
-      {parseError && <p className="mt-2 text-xs text-red-600">{parseError}</p>}
+      {parseError && <p className="mt-2 text-xs text-danger">{parseError}</p>}
 
       {rows.length > 0 && (
         <div className="mt-3">
-          <div className="max-h-64 overflow-auto rounded-lg border border-neutral-200">
+          <div className="max-h-64 overflow-auto rounded-lg border border-border">
             <table className="w-full text-left text-xs">
-              <thead className="bg-neutral-50">
+              <thead className="bg-page-bg">
                 <tr>
                   {EXPECTED_HEADERS.map((h) => (
                     <th key={h} className="px-2 py-1 font-medium">
@@ -110,7 +110,7 @@ export function CsvImportPanel({ onImported }: { onImported: () => void }) {
               </thead>
               <tbody>
                 {rows.map((row, i) => (
-                  <tr key={i} className="border-t border-neutral-100">
+                  <tr key={i} className="border-t border-border">
                     {EXPECTED_HEADERS.map((h) => (
                       <td key={h} className="px-2 py-1">
                         {String(row[h as keyof ImportRow] ?? '')}
@@ -124,7 +124,7 @@ export function CsvImportPanel({ onImported }: { onImported: () => void }) {
           <button
             onClick={confirmImport}
             disabled={importing}
-            className="mt-2 rounded-lg bg-black px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+            className="mt-2 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
           >
             {importing ? 'Importing…' : `Import ${rows.length} rows`}
           </button>
@@ -132,13 +132,13 @@ export function CsvImportPanel({ onImported }: { onImported: () => void }) {
       )}
 
       {summary && (
-        <div className="mt-3 rounded-lg bg-neutral-50 p-3 text-xs">
+        <div className="mt-3 rounded-lg bg-page-bg p-3 text-xs">
           <p>
             Imported {summary.imported} · {summary.created_products} new products ·{' '}
             {summary.updated_products} updated · {summary.created_categories} new categories
           </p>
           {summary.errors.length > 0 && (
-            <ul className="mt-1 list-disc pl-4 text-red-600">
+            <ul className="mt-1 list-disc pl-4 text-danger">
               {summary.errors.map((e, i) => (
                 <li key={i}>
                   Row {e.row}: {e.error}

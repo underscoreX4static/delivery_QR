@@ -58,12 +58,12 @@ export function CustomersBoard() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search by name or phone…"
-          className="flex-1 rounded-lg border border-neutral-300 px-3 py-2 text-base sm:text-sm"
+          className="flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-base text-foreground focus:border-primary focus:outline-none sm:text-sm"
         />
         <select
           value={sortKey}
           onChange={(e) => setSortKey(e.target.value as SortKey)}
-          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+          className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none"
         >
           <option value="most_spent">Most spent</option>
           <option value="most_orders">Most orders</option>
@@ -75,23 +75,23 @@ export function CustomersBoard() {
         <button
           key={customer.id}
           onClick={() => setSelected(customer)}
-          className="flex items-center justify-between rounded-xl border border-neutral-200 bg-white p-4 text-left"
+          className="flex items-center justify-between rounded-xl border border-border bg-surface p-4 text-left"
         >
           <div>
             <p className="text-sm font-semibold">
               {customer.first_name} {customer.last_name}{' '}
               <span className="ml-1 text-xs font-normal">{LOYALTY_BADGE[customer.loyalty_tier]}</span>
             </p>
-            <p className="text-xs text-neutral-600">{customer.phone ?? 'No phone'}</p>
-            {customer.qr_source_name && <p className="text-xs text-neutral-600">via {customer.qr_source_name}</p>}
+            <p className="text-xs text-muted">{customer.phone ?? 'No phone'}</p>
+            {customer.qr_source_name && <p className="text-xs text-muted">via {customer.qr_source_name}</p>}
           </div>
           <div className="text-right text-xs">
             <p className="font-medium">${customer.total_spent.toFixed(2)}</p>
-            <p className="text-neutral-600">{customer.order_count} orders</p>
+            <p className="text-muted">{customer.order_count} orders</p>
           </div>
         </button>
       ))}
-      {visibleCustomers.length === 0 && <p className="text-sm text-neutral-600">No customers match.</p>}
+      {visibleCustomers.length === 0 && <p className="text-sm text-muted">No customers match.</p>}
 
       {selected && <CustomerDetail customer={selected} onClose={() => setSelected(null)} />}
     </div>
@@ -145,7 +145,7 @@ function CustomerDetail({ customer, onClose }: { customer: AdminCustomer; onClos
 
         {favourites.length > 0 && (
           <div>
-            <p className="mb-1 text-xs font-semibold text-neutral-600">Favourite products</p>
+            <p className="mb-1 text-xs font-semibold text-muted">Favourite products</p>
             <ul className="text-xs">
               {favourites.map((f) => (
                 <li key={f.product_id}>
@@ -157,29 +157,29 @@ function CustomerDetail({ customer, onClose }: { customer: AdminCustomer; onClos
         )}
 
         <div>
-          <p className="mb-1 text-xs font-semibold text-neutral-600">Order history</p>
+          <p className="mb-1 text-xs font-semibold text-muted">Order history</p>
           <ul className="flex flex-col gap-1 text-xs">
             {orders.map((o) => (
-              <li key={o.id} className="flex justify-between border-b border-neutral-100 pb-1">
+              <li key={o.id} className="flex justify-between border-b border-border pb-1">
                 <span>#{o.id.slice(0, 8)} · {o.status}</span>
                 <span>${o.total.toFixed(2)}</span>
               </li>
             ))}
-            {orders.length === 0 && <li className="text-neutral-600">No orders yet.</li>}
+            {orders.length === 0 && <li className="text-muted">No orders yet.</li>}
           </ul>
         </div>
 
-        <label className="flex flex-col gap-1 text-xs font-semibold text-neutral-600">
+        <label className="flex flex-col gap-1 text-xs font-semibold text-muted">
           Notes
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={3}
-            className="rounded-lg border border-neutral-300 px-3 py-2 text-sm font-normal text-neutral-900"
+            className="rounded-lg border border-border bg-surface px-3 py-2 text-sm font-normal text-foreground focus:border-primary focus:outline-none"
           />
         </label>
-        {error && <p className="text-xs text-red-600">{error}</p>}
-        <button onClick={saveNotes} disabled={saving} className="rounded-lg bg-black py-2 text-xs font-medium text-white disabled:opacity-50">
+        {error && <p className="text-xs text-danger">{error}</p>}
+        <button onClick={saveNotes} disabled={saving} className="rounded-lg bg-primary py-2 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50">
           Save notes
         </button>
       </div>
@@ -189,9 +189,9 @@ function CustomerDetail({ customer, onClose }: { customer: AdminCustomer; onClos
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg bg-neutral-50 p-2">
-      <p className="text-neutral-600">{label}</p>
-      <p className="font-semibold text-neutral-900">{value}</p>
+    <div className="rounded-lg bg-page-bg p-2">
+      <p className="text-muted">{label}</p>
+      <p className="font-semibold text-foreground">{value}</p>
     </div>
   )
 }

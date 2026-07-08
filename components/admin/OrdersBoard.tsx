@@ -19,13 +19,16 @@ const STATUS_LABELS: Record<OrderStatus, string> = {
   cancelled: 'Cancelled',
 }
 
+// Pipeline progression stays within the palette family — pending (awaiting
+// action) and delivered/cancelled use the semantic tones, while the two
+// "in motion" stages share the primary hue at increasing intensity.
 const STATUS_COLORS: Record<OrderStatus, string> = {
-  pending: 'bg-yellow-100 text-yellow-800',
-  confirmed: 'bg-blue-100 text-blue-800',
-  preparing: 'bg-indigo-100 text-indigo-800',
-  on_the_way: 'bg-purple-100 text-purple-800',
-  delivered: 'bg-green-100 text-green-800',
-  cancelled: 'bg-neutral-200 text-neutral-600',
+  pending: 'bg-warning/15 text-warning',
+  confirmed: 'bg-info/15 text-info',
+  preparing: 'bg-primary/10 text-primary',
+  on_the_way: 'bg-primary/25 text-primary',
+  delivered: 'bg-success/15 text-success',
+  cancelled: 'bg-border text-muted',
 }
 
 export function OrdersBoard() {
@@ -75,21 +78,21 @@ export function OrdersBoard() {
 
   return (
     <div className="flex flex-col gap-3">
-      {orders.length === 0 && <p className="text-sm text-neutral-600">No orders yet.</p>}
+      {orders.length === 0 && <p className="text-sm text-muted">No orders yet.</p>}
 
       {orders.map((order) => (
-        <div key={order.id} className="rounded-xl border border-neutral-200 bg-white p-4">
+        <div key={order.id} className="rounded-xl border border-border bg-surface p-4 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
-              <p className="text-sm font-semibold">
+              <p className="text-sm font-semibold text-foreground">
                 #{order.id.slice(0, 8)} · {order.users?.first_name ?? 'Unknown'} {order.users?.last_name ?? ''}
               </p>
-              <p className="text-xs text-neutral-600">{order.users?.phone ?? 'No phone'}</p>
+              <p className="text-xs text-muted">{order.users?.phone ?? 'No phone'}</p>
               <a
                 href={`https://waze.com/ul?q=${encodeURIComponent(order.delivery_address)}&navigate=yes`}
                 target="_blank"
                 rel="noreferrer"
-                className="text-xs text-blue-600 underline"
+                className="text-xs text-primary underline"
               >
                 {order.delivery_address}
               </a>
@@ -99,7 +102,7 @@ export function OrdersBoard() {
             </span>
           </div>
 
-          <div className="mt-2 text-xs text-neutral-600">
+          <div className="mt-2 text-xs text-muted">
             {order.order_items.length} item{order.order_items.length !== 1 ? 's' : ''} · $
             {order.total.toFixed(2)} · {order.scheduled_at ? `Scheduled ${new Date(order.scheduled_at).toLocaleString()}` : 'ASAP'}
           </div>
@@ -109,7 +112,7 @@ export function OrdersBoard() {
               href={`https://waze.com/ul?q=${encodeURIComponent(order.delivery_address)}&navigate=yes`}
               target="_blank"
               rel="noreferrer"
-              className="rounded-lg bg-neutral-100 px-3 py-1.5 text-xs font-medium text-neutral-700"
+              className="rounded-lg bg-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-border/70"
             >
               🗺️ Waze
             </a>
@@ -117,7 +120,7 @@ export function OrdersBoard() {
               value={order.drivers?.id ?? ''}
               onChange={(e) => runAction(order.id, { action: 'assign_driver', driver_id: e.target.value })}
               disabled={busyId === order.id}
-              className="rounded-lg border border-neutral-300 px-2 py-1 text-xs"
+              className="rounded-lg border border-border bg-surface px-2 py-1 text-xs text-foreground focus:border-primary focus:outline-none"
             >
               <option value="">Assign driver…</option>
               {drivers.map((d) => (
@@ -164,7 +167,7 @@ export function OrdersBoard() {
             )}
             <button
               onClick={() => setChatOpenId(chatOpenId === order.id ? null : order.id)}
-              className="rounded-lg bg-neutral-100 px-3 py-1.5 text-xs font-medium text-neutral-700"
+              className="rounded-lg bg-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-border/70"
             >
               💬 {chatOpenId === order.id ? 'Hide chat' : 'Chat'}
             </button>
@@ -179,7 +182,7 @@ export function OrdersBoard() {
                 value={cancelReason}
                 onChange={(e) => setCancelReason(e.target.value)}
                 placeholder="Cancellation reason…"
-                className="flex-1 rounded-lg border border-neutral-300 px-2 py-1 text-xs"
+                className="flex-1 rounded-lg border border-border bg-surface px-2 py-1 text-xs text-foreground focus:border-primary focus:outline-none"
               />
               <ActionButton variant="danger" onClick={() => submitCancel(order.id)} busy={busyId === order.id}>
                 Confirm cancel
@@ -207,8 +210,8 @@ function ActionButton({
     <button
       onClick={onClick}
       disabled={busy}
-      className={`rounded-lg px-3 py-1.5 text-xs font-medium disabled:opacity-50 ${
-        variant === 'danger' ? 'bg-red-50 text-red-700' : 'bg-black text-white'
+      className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-opacity hover:opacity-90 disabled:opacity-50 ${
+        variant === 'danger' ? 'bg-danger/10 text-danger' : 'bg-primary text-primary-foreground'
       }`}
     >
       {children}

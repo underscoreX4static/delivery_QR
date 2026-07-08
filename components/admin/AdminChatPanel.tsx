@@ -49,14 +49,14 @@ export function AdminChatPanel({ orderId }: { orderId: string }) {
   }
 
   return (
-    <div className="mt-3 rounded-lg bg-neutral-50 p-3">
+    <div className="mt-3 rounded-lg bg-page-bg p-3">
       <div className="max-h-56 space-y-2 overflow-y-auto">
-        {messages.length === 0 && <p className="text-xs text-neutral-600">No messages yet.</p>}
+        {messages.length === 0 && <p className="text-xs text-muted">No messages yet.</p>}
         {messages.map((m) => (
           <div key={m.id} className={`flex ${m.sender_role === 'owner' ? 'justify-end' : 'justify-start'}`}>
             <div
               className={`max-w-[75%] rounded-xl px-2.5 py-1.5 text-xs ${
-                m.sender_role === 'owner' ? 'bg-black text-white' : 'bg-white text-neutral-900 border border-neutral-200'
+                m.sender_role === 'owner' ? 'bg-primary text-primary-foreground' : 'border border-border bg-surface text-foreground'
               }`}
             >
               <span className="mr-1 font-semibold uppercase">{m.sender_role}:</span>
@@ -72,12 +72,12 @@ export function AdminChatPanel({ orderId }: { orderId: string }) {
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && send()}
           placeholder="Reply…"
-          className="flex-1 rounded border border-neutral-300 px-2 py-1 text-xs"
+          className="flex-1 rounded border border-border bg-surface px-2 py-1 text-xs text-foreground focus:border-primary focus:outline-none"
         />
         <button
           onClick={send}
           disabled={sending || !text.trim()}
-          className="rounded-lg bg-black px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+          className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
         >
           Send
         </button>

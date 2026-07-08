@@ -43,7 +43,7 @@ export function ProductsBoard() {
       <div className="flex justify-end">
         <button
           onClick={() => setShowNewForm(true)}
-          className="rounded-lg bg-black px-4 py-3 text-sm font-medium text-white sm:py-1.5 sm:text-xs"
+          className="rounded-lg bg-primary px-4 py-3 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 sm:py-1.5 sm:text-xs"
         >
           New product
         </button>
@@ -60,7 +60,7 @@ export function ProductsBoard() {
             onManageBatches={() => setBatchesFor(product)}
           />
         ))}
-        {products.length === 0 && <p className="col-span-full text-sm text-neutral-600">No products yet.</p>}
+        {products.length === 0 && <p className="col-span-full text-sm text-muted">No products yet.</p>}
       </div>
 
       {showNewForm && (
@@ -110,39 +110,39 @@ function ProductCard({
 }) {
   const stockColor =
     product.stock_qty > 10
-      ? 'bg-green-100 text-green-700'
+      ? 'bg-success/15 text-success'
       : product.stock_qty > 4
-        ? 'bg-orange-100 text-orange-700'
-        : 'bg-red-100 text-red-700'
+        ? 'bg-warning/15 text-warning'
+        : 'bg-danger/15 text-danger'
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-neutral-100 bg-white shadow-sm">
+    <div className="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
       <div className="relative aspect-square">
         {product.image_url ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={product.image_url} alt={product.name} className="h-full w-full object-cover" />
         ) : (
-          <div className="flex h-full w-full items-center justify-center bg-neutral-100 text-3xl">📦</div>
+          <div className="flex h-full w-full items-center justify-center bg-page-bg text-3xl">📦</div>
         )}
         <div className={`absolute right-2 top-2 rounded-full px-2 py-0.5 text-xs font-bold ${stockColor}`}>
           {product.stock_qty} left
         </div>
       </div>
       <div className="space-y-1 p-3">
-        <p className="text-xs text-neutral-600">
+        <p className="text-xs text-muted">
           {product.categories?.name ?? 'Uncategorized'}
           {product.subcategory ? ` · ${product.subcategory}` : ''}
         </p>
-        {product.brand && <p className="text-xs text-neutral-600">{product.brand}</p>}
-        <p className="line-clamp-2 text-sm font-semibold leading-tight text-neutral-900">{product.name}</p>
-        <p className="text-base font-bold text-neutral-900">
+        {product.brand && <p className="text-xs text-muted">{product.brand}</p>}
+        <p className="line-clamp-2 text-sm font-semibold leading-tight text-foreground">{product.name}</p>
+        <p className="text-base font-bold text-foreground">
           {product.current_price !== null ? `$${product.current_price.toFixed(2)}` : '—'}
         </p>
         <div className="flex gap-1 pt-1">
-          <button onClick={onEdit} className="flex-1 rounded-lg bg-neutral-100 py-2 text-xs font-medium text-neutral-700">
+          <button onClick={onEdit} className="flex-1 rounded-lg bg-border py-2 text-xs font-medium text-foreground hover:bg-border/70">
             Edit
           </button>
-          <button onClick={onManageBatches} className="flex-1 rounded-lg bg-blue-600 py-2 text-xs font-medium text-white">
+          <button onClick={onManageBatches} className="flex-1 rounded-lg bg-primary py-2 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90">
             + Batch
           </button>
         </div>
@@ -218,16 +218,16 @@ function ProductForm({
   return (
     <div className="flex flex-col gap-3">
       <Field label="Name">
-        <input value={name} onChange={(e) => setName(e.target.value)} className="rounded-lg border border-neutral-300 px-3 py-2 text-base" />
+        <input value={name} onChange={(e) => setName(e.target.value)} className="rounded-lg border border-border bg-surface px-3 py-2 text-base text-foreground focus:border-primary focus:outline-none" />
       </Field>
       <Field label="Brand">
-        <input value={brand} onChange={(e) => setBrand(e.target.value)} className="rounded-lg border border-neutral-300 px-3 py-2 text-base" />
+        <input value={brand} onChange={(e) => setBrand(e.target.value)} className="rounded-lg border border-border bg-surface px-3 py-2 text-base text-foreground focus:border-primary focus:outline-none" />
       </Field>
       <Field label="Subcategory">
-        <input value={subcategory} onChange={(e) => setSubcategory(e.target.value)} className="rounded-lg border border-neutral-300 px-3 py-2 text-base" />
+        <input value={subcategory} onChange={(e) => setSubcategory(e.target.value)} className="rounded-lg border border-border bg-surface px-3 py-2 text-base text-foreground focus:border-primary focus:outline-none" />
       </Field>
       <Field label="Category">
-        <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className="rounded-lg border border-neutral-300 px-3 py-2 text-base">
+        <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className="rounded-lg border border-border bg-surface px-3 py-2 text-base text-foreground focus:border-primary focus:outline-none">
           <option value="">Select category…</option>
           {categories.map((c) => (
             <option key={c.id} value={c.id}>
@@ -241,25 +241,25 @@ function ProductForm({
           placeholder="New category name"
           value={newCategoryName}
           onChange={(e) => setNewCategoryName(e.target.value)}
-          className="flex-1 rounded-lg border border-neutral-300 px-3 py-2 text-base"
+          className="flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-base text-foreground focus:border-primary focus:outline-none"
         />
-        <button onClick={createCategory} className="rounded-lg bg-neutral-100 px-3 py-2 text-xs font-medium">
+        <button onClick={createCategory} className="rounded-lg bg-border px-3 py-2 text-xs font-medium text-foreground hover:bg-border/70">
           + Add
         </button>
       </div>
       <Field label="Target margin (0-1)">
-        <input value={targetMargin} onChange={(e) => setTargetMargin(e.target.value)} className="rounded-lg border border-neutral-300 px-3 py-2 text-base" />
+        <input value={targetMargin} onChange={(e) => setTargetMargin(e.target.value)} className="rounded-lg border border-border bg-surface px-3 py-2 text-base text-foreground focus:border-primary focus:outline-none" />
       </Field>
       <Field label="Image URL">
-        <input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} className="rounded-lg border border-neutral-300 px-3 py-2 text-base" />
+        <input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} className="rounded-lg border border-border bg-surface px-3 py-2 text-base text-foreground focus:border-primary focus:outline-none" />
       </Field>
 
-      {error && <p className="text-xs text-red-600">{error}</p>}
+      {error && <p className="text-xs text-danger">{error}</p>}
 
       <button
         onClick={submit}
         disabled={submitting || !name || !categoryId}
-        className="rounded-lg bg-black py-3 text-sm font-medium text-white disabled:opacity-50"
+        className="rounded-lg bg-primary py-3 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
       >
         {isEditing ? 'Save changes' : 'Create product'}
       </button>
@@ -269,7 +269,7 @@ function ProductForm({
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <label className="flex flex-col gap-1 text-xs font-medium text-neutral-600">
+    <label className="flex flex-col gap-1 text-xs font-medium text-muted">
       {label}
       {children}
     </label>

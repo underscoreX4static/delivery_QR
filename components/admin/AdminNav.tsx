@@ -32,8 +32,8 @@ export function AdminNav() {
           <Link
             key={link.href}
             href={link.href}
-            className={`flex min-h-11 items-center rounded-lg px-3 py-3 text-sm font-medium sm:py-2 ${
-              active ? 'bg-black text-white' : 'text-neutral-600 hover:bg-neutral-100'
+            className={`flex min-h-11 items-center rounded-lg px-3 py-3 text-sm font-medium transition-colors sm:py-2 ${
+              active ? 'bg-primary text-primary-foreground' : 'text-muted hover:bg-border/40 hover:text-foreground'
             }`}
           >
             {link.label}

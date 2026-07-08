@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { Badge, type BadgeVariant } from '@/components/admin/Badge'
 import type { Driver, Partner, Settlement } from '@/types/index'
 
 interface AdminSettlement extends Settlement {
@@ -13,6 +14,13 @@ const STATUS_LABELS: Record<Settlement['status'], string> = {
   confirmed: 'Confirmed — ready to pay',
   paid: 'Paid — awaiting receipt confirmation',
   payment_received: 'Locked',
+}
+
+const STATUS_VARIANTS: Record<Settlement['status'], BadgeVariant> = {
+  proposed: 'warning',
+  confirmed: 'info',
+  paid: 'info',
+  payment_received: 'success',
 }
 
 export function SettlementsBoard() {
@@ -111,10 +119,10 @@ export function SettlementsBoard() {
   return (
     <div className="flex flex-col gap-4">
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="rounded-xl border border-neutral-200 bg-white p-4">
-          <h2 className="mb-3 text-sm font-semibold">Driver settlement (today)</h2>
+        <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
+          <h2 className="mb-3 text-sm font-semibold text-foreground">Driver settlement (today)</h2>
           <div className="flex flex-wrap gap-2">
-            <select value={driverId} onChange={(e) => setDriverId(e.target.value)} className="rounded border border-neutral-300 px-2 py-1 text-xs">
+            <select value={driverId} onChange={(e) => setDriverId(e.target.value)} className="rounded border border-border bg-surface px-2 py-1 text-xs text-foreground focus:border-primary focus:outline-none">
               <option value="">Select driver…</option>
               {drivers.map((d) => (
                 <option key={d.id} value={d.id}>
@@ -125,17 +133,17 @@ export function SettlementsBoard() {
             <button
               onClick={createDriverSettlement}
               disabled={busy || !driverId}
-              className="rounded-lg bg-black px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+              className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
             >
               Create settlement
             </button>
           </div>
         </div>
 
-        <div className="rounded-xl border border-neutral-200 bg-white p-4">
-          <h2 className="mb-3 text-sm font-semibold">Commercial settlement (on-demand)</h2>
+        <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
+          <h2 className="mb-3 text-sm font-semibold text-foreground">Commercial settlement (on-demand)</h2>
           <div className="flex flex-wrap gap-2">
-            <select value={partnerId} onChange={(e) => setPartnerId(e.target.value)} className="rounded border border-neutral-300 px-2 py-1 text-xs">
+            <select value={partnerId} onChange={(e) => setPartnerId(e.target.value)} className="rounded border border-border bg-surface px-2 py-1 text-xs text-foreground focus:border-primary focus:outline-none">
               <option value="">Select commercial…</option>
               {partners.map((p) => (
                 <option key={p.id} value={p.id}>
@@ -143,12 +151,12 @@ export function SettlementsBoard() {
                 </option>
               ))}
             </select>
-            <input type="date" value={periodStart} onChange={(e) => setPeriodStart(e.target.value)} className="rounded border border-neutral-300 px-2 py-1 text-xs" />
-            <input type="date" value={periodEnd} onChange={(e) => setPeriodEnd(e.target.value)} className="rounded border border-neutral-300 px-2 py-1 text-xs" />
+            <input type="date" value={periodStart} onChange={(e) => setPeriodStart(e.target.value)} className="rounded border border-border bg-surface px-2 py-1 text-xs text-foreground focus:border-primary focus:outline-none" />
+            <input type="date" value={periodEnd} onChange={(e) => setPeriodEnd(e.target.value)} className="rounded border border-border bg-surface px-2 py-1 text-xs text-foreground focus:border-primary focus:outline-none" />
             <button
               onClick={createPartnerSettlement}
               disabled={busy || !partnerId || !periodStart || !periodEnd}
-              className="rounded-lg bg-black px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+              className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
             >
               Create settlement
             </button>
@@ -156,23 +164,23 @@ export function SettlementsBoard() {
         </div>
       </div>
 
-      {error && <p className="text-xs text-red-600">{error}</p>}
+      {error && <p className="text-xs text-danger">{error}</p>}
 
       <div className="flex flex-col gap-2">
         {settlements.map((s) => (
-          <div key={s.id} className="rounded-xl border border-neutral-200 bg-white p-4">
+          <div key={s.id} className="rounded-xl border border-border bg-surface p-4 shadow-sm">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
-                <p className="text-sm font-semibold">
+                <p className="text-sm font-semibold text-foreground">
                   {s.type === 'driver' ? `${s.drivers?.first_name ?? 'Driver'} ${s.drivers?.last_name ?? ''}` : s.partner_name ?? 'Commercial'}
                 </p>
-                <p className="text-xs text-neutral-600">
+                <p className="text-xs text-muted">
                   {s.period_start} → {s.period_end}
                 </p>
               </div>
-              <span className="text-xs font-medium text-neutral-600">{STATUS_LABELS[s.status]}</span>
+              <Badge variant={STATUS_VARIANTS[s.status]}>{STATUS_LABELS[s.status]}</Badge>
             </div>
-            <div className="mt-2 text-xs text-neutral-600">
+            <div className="mt-2 text-xs text-muted">
               Total: ${s.total_cash.toFixed(2)} · Payout: ${s.payout_amount.toFixed(2)}
             </div>
             <div className="mt-2 flex flex-wrap gap-2">
@@ -180,7 +188,7 @@ export function SettlementsBoard() {
                 <button
                   onClick={() => markPaid(s.id)}
                   disabled={busy}
-                  className="rounded-lg bg-black px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+                  className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
                 >
                   Mark paid
                 </button>
@@ -189,7 +197,7 @@ export function SettlementsBoard() {
                 <button
                   onClick={() => cancelSettlement(s.id)}
                   disabled={busy}
-                  className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 disabled:opacity-50"
+                  className="rounded-lg border border-danger/30 px-3 py-1.5 text-xs font-medium text-danger transition-colors hover:bg-danger/10 disabled:opacity-50"
                 >
                   Cancel
                 </button>
@@ -197,7 +205,7 @@ export function SettlementsBoard() {
             </div>
           </div>
         ))}
-        {settlements.length === 0 && <p className="text-sm text-neutral-600">No settlements yet.</p>}
+        {settlements.length === 0 && <p className="text-sm text-muted">No settlements yet.</p>}
       </div>
     </div>
   )

@@ -19,27 +19,27 @@ export function ScheduleBoard() {
     fetch('/api/admin/schedule').then((r) => r.json()).then(setData)
   }, [])
 
-  if (!data) return <p className="text-sm text-neutral-600">Loading…</p>
+  if (!data) return <p className="text-sm text-muted">Loading…</p>
 
   const max = Math.max(1, ...data.heatmap.flat())
   const weekdayChartData = WEEKDAY_LABELS.map((label, i) => ({ day: label, orders: data.by_weekday[i] }))
 
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-xs text-neutral-600">{data.total} orders in the last 30 days</p>
+      <p className="text-xs text-muted">{data.total} orders in the last 30 days</p>
 
-      <div className="overflow-x-auto rounded-xl border border-neutral-200 bg-white p-4">
+      <div className="overflow-x-auto rounded-xl border border-border bg-surface p-4">
         <h2 className="mb-3 text-sm font-semibold">Hourly heatmap</h2>
         <div className="inline-grid grid-cols-[auto_repeat(24,minmax(20px,1fr))] gap-0.5 text-[9px]">
           <div />
           {Array.from({ length: 24 }, (_, h) => (
-            <div key={h} className="text-center text-neutral-600">
+            <div key={h} className="text-center text-muted">
               {h}
             </div>
           ))}
           {WEEKDAY_LABELS.map((label, dayIndex) => (
             <Fragment key={dayIndex}>
-              <div className="pr-2 text-neutral-600">{label}</div>
+              <div className="pr-2 text-muted">{label}</div>
               {data.heatmap[dayIndex].map((count, hour) => {
                 const intensity = count / max
                 return (
@@ -47,7 +47,7 @@ export function ScheduleBoard() {
                     key={`${dayIndex}-${hour}`}
                     title={`${label} ${hour}:00 — ${count} orders`}
                     className="aspect-square rounded-sm"
-                    style={{ backgroundColor: `rgba(23, 23, 23, ${count === 0 ? 0.05 : 0.15 + intensity * 0.85})` }}
+                    style={{ backgroundColor: `rgba(181, 74, 44, ${count === 0 ? 0.05 : 0.15 + intensity * 0.85})` }}
                   />
                 )
               })}
@@ -56,16 +56,16 @@ export function ScheduleBoard() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-neutral-200 bg-white p-4">
+      <div className="rounded-xl border border-border bg-surface p-4">
         <h2 className="mb-3 text-sm font-semibold">Orders by day of week</h2>
         <div className="h-56">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={weekdayChartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" />
-              <XAxis dataKey="day" tick={{ fontSize: 10 }} />
-              <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5d8c8" />
+              <XAxis dataKey="day" tick={{ fontSize: 10, fill: "#8c7a66" }} />
+              <YAxis tick={{ fontSize: 10, fill: "#8c7a66" }} allowDecimals={false} />
               <Tooltip />
-              <Bar dataKey="orders" fill="#171717" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="orders" fill="#b54a2c" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

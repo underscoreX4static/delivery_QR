@@ -107,7 +107,7 @@ export function FinanceBoard() {
     }
   }, [period])
 
-  if (!snap) return <p className="text-sm text-neutral-600">Loading…</p>
+  if (!snap) return <p className="text-sm text-muted">Loading…</p>
 
   const { rates, pools, treasury, growth } = snap
 
@@ -157,14 +157,14 @@ export function FinanceBoard() {
                 { label: '= Dispo réel (avec BFR)', value: treasury.availableCashWithBFR, subtotal: true, strong: true },
               ]}
             />
-            <p className="mt-3 text-xs text-neutral-500">
+            <p className="mt-3 text-xs text-muted">
               Crédits parrainage en circulation : {money(treasury.referralCreditFloat)} — passif futur (remises à venir),
               non retiré du cash.
             </p>
           </Card>
 
           <Card title="Argent engagé (pools)">
-            <div className="flex flex-col divide-y divide-neutral-100">
+            <div className="flex flex-col divide-y divide-border/60">
               <PoolRow label="Budget pool livreurs (dispo à donner)" value={pools.driverPoolSetAside} muted />
               <PoolRow label="Bonus livreurs attribués, non payés" value={pools.driverBonusesOwed} />
               <PoolRow label="Commissions commerciales dues" value={pools.commissionsOwed} />
@@ -173,7 +173,7 @@ export function FinanceBoard() {
               <PoolRow label="COD à encaisser (part owner)" value={pools.codInTransit} muted />
               <PoolRow label="Total engagé (hard)" value={pools.totalCommitted} strong />
             </div>
-            <p className="mt-3 text-xs text-neutral-500">
+            <p className="mt-3 text-xs text-muted">
               « Provisionné » et « en circulation » ne sont pas des sorties fermes — informatifs. Le total « hard » (primes
               + commissions + bienvenue) est ce qui doit réellement sortir.
             </p>
@@ -190,8 +190,8 @@ export function FinanceBoard() {
                   <button
                     key={t.key}
                     onClick={() => setPeriod(t.key)}
-                    className={`rounded px-2 py-1 text-[11px] font-medium ${
-                      period === t.key ? 'bg-black text-white' : 'bg-neutral-100 text-neutral-600'
+                    className={`rounded px-2 py-1 text-[11px] font-medium transition-colors ${
+                      period === t.key ? 'bg-primary text-primary-foreground' : 'bg-border text-muted hover:text-foreground'
                     }`}
                   >
                     {t.label}
@@ -200,17 +200,17 @@ export function FinanceBoard() {
               </div>
             }
           >
-            <div className="rounded-lg bg-neutral-900 p-4 text-white">
-              <p className="text-xs text-neutral-400">Dans la poche (owner net après pool)</p>
+            <div className="rounded-lg bg-foreground p-4 text-background">
+              <p className="text-xs text-background/60">Dans la poche (owner net après pool)</p>
               <p className="text-3xl font-semibold">{money(snap.earnings.ownerTakeHome)}</p>
-              <div className="mt-2 flex flex-col gap-0.5 text-xs text-neutral-400">
+              <div className="mt-2 flex flex-col gap-0.5 text-xs text-background/60">
                 <div className="flex justify-between">
                   <span>Bénéf owner (avant pool)</span>
-                  <span className="text-neutral-200">{money(snap.earnings.ownerNet)}</span>
+                  <span className="text-background/80">{money(snap.earnings.ownerNet)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>− Mis dans le pool livreurs</span>
-                  <span className="text-amber-300">−{money(snap.earnings.bonusPoolContributions)}</span>
+                  <span className="text-warning">−{money(snap.earnings.bonusPoolContributions)}</span>
                 </div>
               </div>
             </div>
@@ -223,7 +223,7 @@ export function FinanceBoard() {
           </Card>
 
           <Card title={period === 'today' ? 'Répartition — clôture du jour' : 'Répartition de la période'}>
-            <p className="mb-3 text-xs text-neutral-500">
+            <p className="mb-3 text-xs text-muted">
               Où va chaque dollar de CA livré sur la période. Le pool est prélevé sur ta part avant ce qui te reste.
             </p>
             <Waterfall
@@ -241,7 +241,7 @@ export function FinanceBoard() {
           </Card>
 
           <Card title="Taux actifs">
-            <div className="flex flex-col divide-y divide-neutral-100 text-sm">
+            <div className="flex flex-col divide-y divide-border/60 text-sm">
               <RateRow label="Part livreur (du profit brut)" value={pct(rates.driverPayoutShare)} />
               <RateRow label="Part owner (du profit brut)" value={pct(rates.ownerProfitShare)} />
               <RateRow label="Cagnotte livreur (du net owner)" value={pct(rates.bonusPoolRate)} />
@@ -288,10 +288,10 @@ function Simulator({ snap }: { snap: Snapshot }) {
 
   return (
     <Card title="Simulateur — jusqu'où je pousse ?">
-      <p className="mb-4 text-xs text-neutral-500">
+      <p className="mb-4 text-xs text-muted">
         Bouge les curseurs pour voir l&apos;impact sur le burn et le runway. Simulation pure — rien n&apos;est modifié.
         Quand ça te convient, applique-le toi-même dans{' '}
-        <a href="/admin/settings" className="underline">
+        <a href="/admin/settings" className="text-primary underline">
           les réglages
         </a>
         .
@@ -367,8 +367,8 @@ function Slider({
   return (
     <div>
       <div className="mb-1 flex items-baseline justify-between">
-        <span className="text-[11px] font-medium uppercase text-neutral-500">{label}</span>
-        <span className={`text-sm font-semibold ${changed ? 'text-black' : 'text-neutral-500'}`}>{display}</span>
+        <span className="text-[11px] font-medium uppercase text-muted">{label}</span>
+        <span className={`text-sm font-semibold ${changed ? 'text-primary' : 'text-muted'}`}>{display}</span>
       </div>
       <input
         type="range"
@@ -377,7 +377,7 @@ function Slider({
         step={step}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full accent-black"
+        className="w-full accent-primary"
       />
     </div>
   )
@@ -400,31 +400,28 @@ function RunwayCard({
 }) {
   const danger = weeks !== null && weeks < 4
   const warn = weeks !== null && weeks < 8 && !danger
-  const bar =
-    tone === 'realistic'
-      ? 'border-neutral-300 bg-white'
-      : 'border-neutral-200 bg-neutral-50'
+  const bar = tone === 'realistic' ? 'border-border bg-surface' : 'border-border bg-page-bg'
   return (
     <div className={`rounded-xl border p-5 ${bar}`}>
-      <p className="text-xs font-medium text-neutral-600">{title}</p>
-      <p className="text-[11px] text-neutral-400">{subtitle}</p>
+      <p className="text-xs font-medium text-muted">{title}</p>
+      <p className="text-[11px] text-muted/70">{subtitle}</p>
       <p
         className={`mt-2 text-4xl font-bold tracking-tight ${
-          danger ? 'text-red-600' : warn ? 'text-amber-600' : 'text-neutral-900'
+          danger ? 'text-danger' : warn ? 'text-warning' : 'text-foreground'
         }`}
       >
         {runwayLabel(weeks)}
       </p>
-      <p className="mt-1 text-xs text-neutral-500">{money(cash)} de cash libre</p>
+      <p className="mt-1 text-xs text-muted">{money(cash)} de cash libre</p>
     </div>
   )
 }
 
 function Card({ title, action, children }: { title: string; action?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-neutral-200 bg-white p-4">
+    <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-sm font-semibold">{title}</h2>
+        <h2 className="text-sm font-semibold text-foreground">{title}</h2>
         {action}
       </div>
       {children}
@@ -434,18 +431,18 @@ function Card({ title, action, children }: { title: string; action?: React.React
 
 function Tile({ label, value, accent }: { label: string; value: string; accent?: 'burn' }) {
   return (
-    <div className="rounded-xl border border-neutral-200 bg-white p-4">
-      <p className="text-xs text-neutral-600">{label}</p>
-      <p className={`text-lg font-semibold ${accent === 'burn' ? 'text-red-600' : ''}`}>{value}</p>
+    <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
+      <p className="text-xs text-muted">{label}</p>
+      <p className={`text-lg font-semibold ${accent === 'burn' ? 'text-danger' : 'text-foreground'}`}>{value}</p>
     </div>
   )
 }
 
 function MiniStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-neutral-100 bg-neutral-50 px-3 py-2">
-      <p className="text-[10px] uppercase text-neutral-500">{label}</p>
-      <p className="font-semibold">{value}</p>
+    <div className="rounded-lg border border-border/60 bg-page-bg px-3 py-2">
+      <p className="text-[10px] uppercase text-muted">{label}</p>
+      <p className="font-semibold text-foreground">{value}</p>
     </div>
   )
 }
@@ -456,7 +453,7 @@ function Waterfall({
   rows: { label: string; value: number; sign?: '+' | '−'; subtotal?: boolean; strong?: boolean }[]
 }) {
   return (
-    <div className="flex flex-col divide-y divide-neutral-100">
+    <div className="flex flex-col divide-y divide-border/60">
       {rows.map((r, i) => (
         <div
           key={i}
@@ -464,18 +461,8 @@ function Waterfall({
             r.strong ? 'text-base' : 'text-sm'
           }`}
         >
-          <span className={r.subtotal ? 'text-neutral-900' : 'text-neutral-600'}>{r.label}</span>
-          <span
-            className={
-              r.strong
-                ? r.value < 0
-                  ? 'text-red-600'
-                  : 'text-neutral-900'
-                : r.value < 0
-                  ? 'text-neutral-500'
-                  : 'text-neutral-900'
-            }
-          >
+          <span className={r.subtotal ? 'text-foreground' : 'text-muted'}>{r.label}</span>
+          <span className={r.strong ? (r.value < 0 ? 'text-danger' : 'text-foreground') : r.value < 0 ? 'text-muted' : 'text-foreground'}>
             {money(r.value)}
           </span>
         </div>
@@ -487,8 +474,8 @@ function Waterfall({
 function PoolRow({ label, value, strong, muted }: { label: string; value: number; strong?: boolean; muted?: boolean }) {
   return (
     <div className={`flex items-center justify-between py-2 text-sm ${strong ? 'font-semibold' : ''}`}>
-      <span className={muted ? 'text-neutral-400' : 'text-neutral-600'}>{label}</span>
-      <span className={muted ? 'text-neutral-500' : 'text-neutral-900'}>{money(value)}</span>
+      <span className={muted ? 'text-muted/70' : 'text-muted'}>{label}</span>
+      <span className={muted ? 'text-muted' : 'text-foreground'}>{money(value)}</span>
     </div>
   )
 }
@@ -496,18 +483,18 @@ function PoolRow({ label, value, strong, muted }: { label: string; value: number
 function RateRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between py-2">
-      <span className="text-neutral-600">{label}</span>
-      <span className="font-medium text-neutral-900">{value}</span>
+      <span className="text-muted">{label}</span>
+      <span className="font-medium text-foreground">{value}</span>
     </div>
   )
 }
 
 function SimResult({ label, value, hint, tone }: { label: string; value: string; hint?: string; tone?: 'burn' | 'optimistic' | 'realistic' }) {
   return (
-    <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-3 text-center">
-      <p className="text-[10px] uppercase text-neutral-500">{label}</p>
-      <p className={`text-xl font-bold ${tone === 'burn' ? 'text-red-600' : 'text-neutral-900'}`}>{value}</p>
-      {hint && <p className="text-[10px] text-neutral-500">{hint}</p>}
+    <div className="rounded-lg border border-border bg-page-bg p-3 text-center">
+      <p className="text-[10px] uppercase text-muted">{label}</p>
+      <p className={`text-xl font-bold ${tone === 'burn' ? 'text-danger' : 'text-foreground'}`}>{value}</p>
+      {hint && <p className="text-[10px] text-muted">{hint}</p>}
     </div>
   )
 }

@@ -122,15 +122,15 @@ export function PartnerDetail({ partnerId }: { partnerId: string }) {
     }
   }
 
-  if (!partner || !stats) return <p className="text-sm text-neutral-600">Loading…</p>
+  if (!partner || !stats) return <p className="text-sm text-muted">Loading…</p>
 
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <Link href="/admin/partners" className="text-sm text-neutral-600">
+        <Link href="/admin/partners" className="text-sm text-muted hover:text-foreground">
           ← Commercials
         </Link>
-        <h1 className="mt-1 text-xl font-semibold">{partner.name}</h1>
+        <h1 className="mt-1 text-xl font-semibold text-foreground">{partner.name}</h1>
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -140,11 +140,11 @@ export function PartnerDetail({ partnerId }: { partnerId: string }) {
         <StatTile label="Revenue generated" value={`$${stats.revenue_generated.toFixed(2)}`} />
       </div>
 
-      <div className="rounded-xl border border-neutral-200 bg-white p-4">
-        <h2 className="mb-3 text-sm font-semibold">Financial summary</h2>
+      <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
+        <h2 className="mb-3 text-sm font-semibold text-foreground">Financial summary</h2>
         <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
           <div>
-            <p className="text-xs text-neutral-600">Commission rate</p>
+            <p className="text-xs text-muted">Commission rate</p>
             <div className="flex items-center gap-1">
               <input
                 type="number"
@@ -155,31 +155,31 @@ export function PartnerDetail({ partnerId }: { partnerId: string }) {
                 onChange={(e) => setCommissionInput(e.target.value)}
                 onBlur={saveCommission}
                 disabled={savingCommission}
-                className="w-16 rounded border border-neutral-300 px-2 py-1 font-semibold disabled:opacity-50"
+                className="w-16 rounded border border-border bg-surface px-2 py-1 font-semibold text-foreground focus:border-primary focus:outline-none disabled:opacity-50"
               />
-              <span className="font-semibold">%</span>
+              <span className="font-semibold text-foreground">%</span>
             </div>
           </div>
           <div>
-            <p className="text-xs text-neutral-600">Total earned</p>
-            <p className="font-semibold">${stats.total_earned.toFixed(2)}</p>
+            <p className="text-xs text-muted">Total earned</p>
+            <p className="font-semibold text-foreground">${stats.total_earned.toFixed(2)}</p>
           </div>
           <div>
-            <p className="text-xs text-neutral-600">Paid out</p>
-            <p className="font-semibold">${stats.total_paid.toFixed(2)}</p>
+            <p className="text-xs text-muted">Paid out</p>
+            <p className="font-semibold text-foreground">${stats.total_paid.toFixed(2)}</p>
           </div>
           <div>
-            <p className="text-xs text-neutral-600">Pending</p>
-            <p className="font-semibold">${stats.pending.toFixed(2)}</p>
+            <p className="text-xs text-muted">Pending</p>
+            <p className="font-semibold text-foreground">${stats.pending.toFixed(2)}</p>
           </div>
         </div>
       </div>
 
       {firstSaleBonus && (
-        <div className="rounded-xl border border-neutral-200 bg-white p-4">
-          <h2 className="mb-3 text-sm font-semibold">Welcome bonus</h2>
+        <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
+          <h2 className="mb-3 text-sm font-semibold text-foreground">Welcome bonus</h2>
           <div className="flex flex-wrap items-end gap-3">
-            <label className="flex flex-col gap-1 text-[10px] font-medium uppercase text-neutral-600">
+            <label className="flex flex-col gap-1 text-[10px] font-medium uppercase text-muted">
               Bonus amount ($)
               <input
                 type="number"
@@ -187,43 +187,43 @@ export function PartnerDetail({ partnerId }: { partnerId: string }) {
                 value={bonusAmountInput}
                 onChange={(e) => setBonusAmountInput(e.target.value)}
                 onBlur={saveBonusAmount}
-                className="w-24 rounded border border-neutral-300 px-2 py-1 text-xs"
+                className="w-24 rounded border border-border bg-surface px-2 py-1 text-xs text-foreground focus:border-primary focus:outline-none"
               />
             </label>
-            <label className="flex flex-col gap-1 text-[10px] font-medium uppercase text-neutral-600">
+            <label className="flex flex-col gap-1 text-[10px] font-medium uppercase text-muted">
               Unlocks on
               <select
                 value={triggerOrdersInput}
                 onChange={(e) => saveTriggerOrders(e.target.value)}
-                className="rounded border border-neutral-300 px-2 py-1 text-xs"
+                className="rounded border border-border bg-surface px-2 py-1 text-xs text-foreground focus:border-primary focus:outline-none"
               >
                 <option value="1">1st sale</option>
                 <option value="2">2nd sale</option>
                 <option value="3">3rd sale</option>
               </select>
             </label>
-            <p className="text-xs text-neutral-600">Modulable per commercial — some get more, some less.</p>
+            <p className="text-xs text-muted">Modulable per commercial — some get more, some less.</p>
           </div>
 
           <div className="mt-3 flex items-center justify-between text-sm">
             <div>
               {!firstSaleBonus.earned && (
-                <p className="text-neutral-600">
+                <p className="text-muted">
                   Not earned yet — awarded on their {ordinal(firstSaleBonus.trigger_orders)} delivered referral.
                 </p>
               )}
               {firstSaleBonus.earned && firstSaleBonus.paid && (
-                <p className="font-medium text-green-700">✅ Earned and paid</p>
+                <p className="font-medium text-success">✅ Earned and paid</p>
               )}
               {firstSaleBonus.earned && !firstSaleBonus.paid && (
-                <p className="font-medium text-amber-700">🎁 Earned — awaiting payment</p>
+                <p className="font-medium text-warning">🎁 Earned — awaiting payment</p>
               )}
             </div>
             {firstSaleBonus.earned && !firstSaleBonus.paid && (
               <button
                 disabled={markingPaid}
                 onClick={markPaid}
-                className="rounded-lg bg-black px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+                className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
               >
                 {markingPaid ? 'Marking…' : 'Mark paid'}
               </button>
@@ -232,47 +232,47 @@ export function PartnerDetail({ partnerId }: { partnerId: string }) {
         </div>
       )}
 
-      <div className="rounded-xl border border-neutral-200 bg-white p-4">
-        <h2 className="mb-3 text-sm font-semibold">Orders</h2>
+      <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
+        <h2 className="mb-3 text-sm font-semibold text-foreground">Orders</h2>
         <div className="flex flex-col gap-2 text-xs">
           {orders.map((o) => (
-            <div key={o.order_id} className="flex items-center justify-between border-b border-neutral-100 pb-2">
+            <div key={o.order_id} className="flex items-center justify-between border-b border-border pb-2">
               <div>
-                <p className="font-medium">{o.customer_name}</p>
-                <p className="text-neutral-600">
+                <p className="font-medium text-foreground">{o.customer_name}</p>
+                <p className="text-muted">
                   {new Date(o.created_at).toLocaleDateString()} · {o.status}
                 </p>
               </div>
               <div className="text-right">
-                <p>${o.total.toFixed(2)}</p>
+                <p className="text-foreground">${o.total.toFixed(2)}</p>
                 {o.commission_amount !== null && (
-                  <p className="text-neutral-600">
+                  <p className="text-muted">
                     ${o.commission_amount.toFixed(2)} {o.commission_paid_out ? '(paid)' : '(pending)'}
                   </p>
                 )}
               </div>
             </div>
           ))}
-          {orders.length === 0 && <p className="text-neutral-600">No orders yet.</p>}
+          {orders.length === 0 && <p className="text-muted">No orders yet.</p>}
         </div>
       </div>
 
-      <div className="rounded-xl border border-neutral-200 bg-white p-4">
-        <h2 className="mb-3 text-sm font-semibold">Customers brought</h2>
+      <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
+        <h2 className="mb-3 text-sm font-semibold text-foreground">Customers brought</h2>
         <div className="flex flex-col gap-2 text-xs">
           {customers.map((c) => (
-            <div key={c.user_id} className="flex items-center justify-between border-b border-neutral-100 pb-2">
+            <div key={c.user_id} className="flex items-center justify-between border-b border-border pb-2">
               <div>
-                <p className="font-medium">{c.name}</p>
-                <p className="text-neutral-600">First order {new Date(c.first_order_at).toLocaleDateString()}</p>
+                <p className="font-medium text-foreground">{c.name}</p>
+                <p className="text-muted">First order {new Date(c.first_order_at).toLocaleDateString()}</p>
               </div>
               <div className="text-right">
-                <p>{c.order_count} orders</p>
-                <p className="text-neutral-600">${c.total_spent.toFixed(2)}</p>
+                <p className="text-foreground">{c.order_count} orders</p>
+                <p className="text-muted">${c.total_spent.toFixed(2)}</p>
               </div>
             </div>
           ))}
-          {customers.length === 0 && <p className="text-neutral-600">No customers yet.</p>}
+          {customers.length === 0 && <p className="text-muted">No customers yet.</p>}
         </div>
       </div>
     </div>
@@ -281,9 +281,9 @@ export function PartnerDetail({ partnerId }: { partnerId: string }) {
 
 function StatTile({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="rounded-xl border border-neutral-200 bg-white p-4">
-      <p className="text-xs text-neutral-600">{label}</p>
-      <p className="text-xl font-semibold">{value}</p>
+    <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
+      <p className="text-xs text-muted">{label}</p>
+      <p className="text-xl font-semibold text-foreground">{value}</p>
     </div>
   )
 }

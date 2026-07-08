@@ -54,10 +54,10 @@ export function BatchManager({ productId, targetMargin }: { productId: string; t
   }
 
   return (
-    <div className="mt-3 rounded-lg bg-neutral-50 p-3">
+    <div className="mt-3 rounded-lg bg-page-bg p-3">
       <table className="w-full text-left text-xs">
         <thead>
-          <tr className="text-neutral-600">
+          <tr className="text-muted">
             <th className="py-1">Received</th>
             <th>Supplier</th>
             <th>Remaining</th>
@@ -68,7 +68,7 @@ export function BatchManager({ productId, targetMargin }: { productId: string; t
         </thead>
         <tbody>
           {batches.map((b) => (
-            <tr key={b.id} className="border-t border-neutral-200">
+            <tr key={b.id} className="border-t border-border">
               <td className="py-1">{new Date(b.received_at).toLocaleDateString()}</td>
               <td>{b.supplier ?? '—'}</td>
               <td>
@@ -81,7 +81,7 @@ export function BatchManager({ productId, targetMargin }: { productId: string; t
           ))}
           {batches.length === 0 && (
             <tr>
-              <td colSpan={6} className="py-2 text-neutral-600">
+              <td colSpan={6} className="py-2 text-muted">
                 No batches yet.
               </td>
             </tr>
@@ -91,14 +91,14 @@ export function BatchManager({ productId, targetMargin }: { productId: string; t
 
       <div className="mt-3 flex flex-wrap items-end gap-2">
         <Field label="Supplier">
-          <input value={supplier} onChange={(e) => setSupplier(e.target.value)} className="w-32 rounded border border-neutral-300 px-2 py-1 text-xs" />
+          <input value={supplier} onChange={(e) => setSupplier(e.target.value)} className="w-32 rounded border border-border bg-surface px-2 py-1 text-xs text-foreground focus:border-primary focus:outline-none" />
         </Field>
         <Field label="Quantity">
           <input
             type="number"
             value={quantity}
             onChange={(e) => setQuantity(e.target.value)}
-            className="w-20 rounded border border-neutral-300 px-2 py-1 text-xs"
+            className="w-20 rounded border border-border bg-surface px-2 py-1 text-xs text-foreground focus:border-primary focus:outline-none"
           />
         </Field>
         <Field label="Cost price">
@@ -107,7 +107,7 @@ export function BatchManager({ productId, targetMargin }: { productId: string; t
             step="0.01"
             value={costPrice}
             onChange={(e) => setCostPrice(e.target.value)}
-            className="w-24 rounded border border-neutral-300 px-2 py-1 text-xs"
+            className="w-24 rounded border border-border bg-surface px-2 py-1 text-xs text-foreground focus:border-primary focus:outline-none"
           />
         </Field>
         <Field label="Sell price">
@@ -116,25 +116,25 @@ export function BatchManager({ productId, targetMargin }: { productId: string; t
             step="0.01"
             value={sellPrice}
             onChange={(e) => setSellPriceOverride(e.target.value)}
-            className="w-24 rounded border border-neutral-300 px-2 py-1 text-xs"
+            className="w-24 rounded border border-border bg-surface px-2 py-1 text-xs text-foreground focus:border-primary focus:outline-none"
           />
         </Field>
         <button
           onClick={addBatch}
           disabled={submitting || !quantity || !costPrice}
-          className="rounded-lg bg-black px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+          className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
         >
           Add batch
         </button>
       </div>
-      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+      {error && <p className="mt-1 text-xs text-danger">{error}</p>}
     </div>
   )
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <label className="flex flex-col gap-1 text-[10px] font-medium uppercase text-neutral-600">
+    <label className="flex flex-col gap-1 text-[10px] font-medium uppercase text-muted">
       {label}
       {children}
     </label>
