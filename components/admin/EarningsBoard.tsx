@@ -49,7 +49,7 @@ export function EarningsBoard() {
           <button
             key={tab.key}
             onClick={() => setPeriod(tab.key)}
-            className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${period === tab.key ? 'bg-primary text-primary-foreground' : 'bg-border text-muted hover:text-foreground'}`}
+            className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${period === tab.key ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-surface text-muted hover:border-primary/40 hover:text-foreground'}`}
           >
             {tab.label}
           </button>
@@ -68,13 +68,13 @@ export function EarningsBoard() {
       {summary && (
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
-            <p className="text-xs text-muted">Owner net (avant pool)</p>
-            <p className="text-2xl font-semibold text-foreground">${summary.ownerNet.toFixed(2)}</p>
+            <p className="text-[10px] font-medium uppercase tracking-wide text-muted">Owner net (avant pool)</p>
+            <p className="mt-0.5 text-3xl font-bold tracking-tight text-foreground">${summary.ownerNet.toFixed(2)}</p>
             <p className="mt-1 text-xs text-warning">− ${summary.bonusPoolContributions.toFixed(2)} mis dans le pool livreurs</p>
           </div>
           <div className="rounded-xl border border-foreground bg-foreground p-4 text-background">
-            <p className="text-xs text-background/60">Dans la poche</p>
-            <p className="text-2xl font-semibold">${summary.ownerTakeHome.toFixed(2)}</p>
+            <p className="text-[10px] font-medium uppercase tracking-wide text-background/60">Dans la poche</p>
+            <p className="mt-0.5 text-3xl font-bold tracking-tight">${summary.ownerTakeHome.toFixed(2)}</p>
             <p className="mt-1 text-xs text-background/60">Ce qui te reste après avoir financé le pool</p>
           </div>
         </div>
@@ -86,8 +86,8 @@ export function EarningsBoard() {
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={series}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5d8c8" />
-              <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#8c7a66' }} tickFormatter={(d) => d.slice(5)} />
-              <YAxis tick={{ fontSize: 10, fill: '#8c7a66' }} />
+              <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#6e5e4c' }} tickFormatter={(d) => d.slice(5)} />
+              <YAxis tick={{ fontSize: 10, fill: '#6e5e4c' }} />
               <Tooltip formatter={(value) => [`$${Number(value).toFixed(2)}`, 'Revenue']} />
               <Bar dataKey="revenue" fill="#b54a2c" radius={[4, 4, 0, 0]} />
             </BarChart>
@@ -101,8 +101,8 @@ export function EarningsBoard() {
 function StatTile({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
-      <p className="text-xs text-muted">{label}</p>
-      <p className="text-lg font-semibold text-foreground">{value}</p>
+      <p className="text-[10px] font-medium uppercase tracking-wide text-muted">{label}</p>
+      <p className="mt-0.5 text-2xl font-bold tracking-tight text-foreground">{value}</p>
     </div>
   )
 }

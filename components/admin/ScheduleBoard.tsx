@@ -62,8 +62,8 @@ export function ScheduleBoard() {
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={weekdayChartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5d8c8" />
-              <XAxis dataKey="day" tick={{ fontSize: 10, fill: "#8c7a66" }} />
-              <YAxis tick={{ fontSize: 10, fill: "#8c7a66" }} allowDecimals={false} />
+              <XAxis dataKey="day" tick={{ fontSize: 10, fill: "#6e5e4c" }} />
+              <YAxis tick={{ fontSize: 10, fill: "#6e5e4c" }} allowDecimals={false} />
               <Tooltip />
               <Bar dataKey="orders" fill="#b54a2c" radius={[4, 4, 0, 0]} />
             </BarChart>

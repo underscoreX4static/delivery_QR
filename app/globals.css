@@ -25,17 +25,19 @@
   --border: #e5d8c8; /* warm sand — default border color */
 
   /* Text */
-  --muted: #8c7a66; /* warm taupe — secondary/label text */
+  --muted: #6e5e4c; /* warm taupe, darkened for AA contrast — secondary/label text */
 
   /* Brand */
   --primary: #b54a2c; /* burnt terracotta/ember — primary buttons, links, active nav */
   --primary-foreground: #fbf3ea; /* warm cream text on primary */
 
-  /* Semantic status (badges, alerts, stat highlighting) */
-  --success: #6c7a4c; /* moss/olive — paid, confirmed, active */
-  --warning: #c6892c; /* honey amber — pending, awaiting action */
+  /* Semantic status (badges, alerts, stat highlighting) — darkened from the
+   * original picks, which read fine as swatches but failed WCAG AA (as low as
+   * 2.5:1) as actual text/badge content against light warm surfaces. */
+  --success: #566142; /* moss/olive, darkened — paid, confirmed, active */
+  --warning: #8a5a1e; /* honey amber, darkened — pending, awaiting action */
   --danger: #8f3529; /* oxblood/brick — cancel, overdue, negative balance */
-  --info: #5e6e6b; /* warm slate — neutral informational badge */
+  --info: #465451; /* warm slate, darkened — neutral informational badge */
 }
 
 @theme inline {

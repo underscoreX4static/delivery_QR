@@ -199,8 +199,8 @@ export function DriverDetail({ driverId }: { driverId: string }) {
 function StatTile({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
-      <p className="text-xs text-muted">{label}</p>
-      <p className="text-xl font-semibold text-foreground">{value}</p>
+      <p className="text-[10px] font-medium uppercase tracking-wide text-muted">{label}</p>
+      <p className="mt-0.5 text-2xl font-bold tracking-tight text-foreground">{value}</p>
     </div>
   )
 }

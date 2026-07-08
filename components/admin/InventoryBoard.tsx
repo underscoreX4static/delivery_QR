@@ -82,7 +82,7 @@ export function InventoryBoard() {
           <button
             key={f}
             onClick={() => setFilter(f)}
-            className={`rounded-lg px-3 py-1.5 text-xs font-medium ${filter === f ? 'bg-primary text-primary-foreground' : 'bg-border text-muted hover:text-foreground'}`}
+            className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${filter === f ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-surface text-muted hover:border-primary/40 hover:text-foreground'}`}
           >
             {f === 'all' ? 'All' : f === 'restock' ? 'Restock needed' : f === 'bestsellers' ? 'Bestsellers' : 'Slow movers'}
           </button>
@@ -183,9 +183,9 @@ export function InventoryBoard() {
 
 function StatTile({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-xl border border-border bg-surface p-4">
-      <p className="text-xs text-muted">{label}</p>
-      <p className="text-xl font-semibold">{value}</p>
+    <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
+      <p className="text-[10px] font-medium uppercase tracking-wide text-muted">{label}</p>
+      <p className="mt-0.5 text-2xl font-bold tracking-tight text-foreground">{value}</p>
     </div>
   )
 }

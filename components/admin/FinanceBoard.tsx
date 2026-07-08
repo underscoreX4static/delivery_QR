@@ -190,8 +190,10 @@ export function FinanceBoard() {
                   <button
                     key={t.key}
                     onClick={() => setPeriod(t.key)}
-                    className={`rounded px-2 py-1 text-[11px] font-medium transition-colors ${
-                      period === t.key ? 'bg-primary text-primary-foreground' : 'bg-border text-muted hover:text-foreground'
+                    className={`rounded border px-2 py-1 text-[11px] font-medium transition-colors ${
+                      period === t.key
+                        ? 'border-primary bg-primary text-primary-foreground'
+                        : 'border-border bg-surface text-muted hover:border-primary/40 hover:text-foreground'
                     }`}
                   >
                     {t.label}
@@ -202,7 +204,7 @@ export function FinanceBoard() {
           >
             <div className="rounded-lg bg-foreground p-4 text-background">
               <p className="text-xs text-background/60">Dans la poche (owner net après pool)</p>
-              <p className="text-3xl font-semibold">{money(snap.earnings.ownerTakeHome)}</p>
+              <p className="text-4xl font-bold tracking-tight">{money(snap.earnings.ownerTakeHome)}</p>
               <div className="mt-2 flex flex-col gap-0.5 text-xs text-background/60">
                 <div className="flex justify-between">
                   <span>Bénéf owner (avant pool)</span>
@@ -403,8 +405,8 @@ function RunwayCard({
   const bar = tone === 'realistic' ? 'border-border bg-surface' : 'border-border bg-page-bg'
   return (
     <div className={`rounded-xl border p-5 ${bar}`}>
-      <p className="text-xs font-medium text-muted">{title}</p>
-      <p className="text-[11px] text-muted/70">{subtitle}</p>
+      <p className="text-[10px] font-medium uppercase tracking-wide text-muted">{title}</p>
+      <p className="text-[11px] text-muted">{subtitle}</p>
       <p
         className={`mt-2 text-4xl font-bold tracking-tight ${
           danger ? 'text-danger' : warn ? 'text-warning' : 'text-foreground'
@@ -432,8 +434,8 @@ function Card({ title, action, children }: { title: string; action?: React.React
 function Tile({ label, value, accent }: { label: string; value: string; accent?: 'burn' }) {
   return (
     <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
-      <p className="text-xs text-muted">{label}</p>
-      <p className={`text-lg font-semibold ${accent === 'burn' ? 'text-danger' : 'text-foreground'}`}>{value}</p>
+      <p className="text-[10px] font-medium uppercase tracking-wide text-muted">{label}</p>
+      <p className={`mt-0.5 text-2xl font-bold tracking-tight ${accent === 'burn' ? 'text-danger' : 'text-foreground'}`}>{value}</p>
     </div>
   )
 }
