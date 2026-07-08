@@ -25,6 +25,7 @@ const FIELD_TO_KEY: Record<string, string> = {
   reorderDaysDefault: 'reorder_days_default',
   bonusPoolRate: 'bonus_pool_rate',
   referralRewardAmount: 'referral_reward_amount',
+  startingCash: 'starting_cash',
 }
 
 export async function PATCH(request: NextRequest) {

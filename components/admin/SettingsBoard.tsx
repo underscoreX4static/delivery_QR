@@ -21,6 +21,7 @@ interface StoreSettings {
   reorderDaysDefault: number
   bonusPoolRate: number
   referralRewardAmount: number
+  startingCash: number
 }
 
 const DAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -210,6 +211,27 @@ export function SettingsBoard() {
             /admin/referrals
           </a>
           .
+        </p>
+      </div>
+
+      <div className="rounded-xl border border-neutral-200 bg-white p-4">
+        <h2 className="mb-3 text-sm font-semibold">Treasury baseline</h2>
+        <Field label="Cash on hand ($)">
+          <input
+            type="number"
+            step="1"
+            value={settings.startingCash}
+            onChange={(e) => update('startingCash', Number(e.target.value))}
+            className="w-32 rounded border border-neutral-300 px-2 py-1 text-xs"
+          />
+        </Field>
+        <p className="mt-2 text-xs text-neutral-600">
+          Your real liquid cash right now — the app can&apos;t see your bank, so it starts from this figure and adjusts
+          by what it watches flow through (sales, payouts, credits). Powers the runway on{' '}
+          <a href="/admin/finance" className="underline">
+            /admin/finance
+          </a>
+          . Re-enter it whenever it drifts from reality.
         </p>
       </div>
 

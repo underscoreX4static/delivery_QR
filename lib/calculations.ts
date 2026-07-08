@@ -4,8 +4,8 @@ import type { PayoutBreakdown } from '@/types/index'
 // payout, profit, pricing, or discount calculations. Every other file must
 // call into these functions rather than re-deriving the math.
 
-const DRIVER_PAYOUT_SHARE = 0.38
-const OWNER_PROFIT_SHARE = 0.62
+export const DRIVER_PAYOUT_SHARE = 0.38
+export const OWNER_PROFIT_SHARE = 0.62
 
 export interface PricingSettings {
   deliveryFee: number

@@ -10,6 +10,13 @@ export interface StoreSettings extends PricingSettings {
   bonusPoolRate: number
   /** Credit given to BOTH the referrer and the referred customer once a referral is admin-approved. */
   referralRewardAmount: number
+  /**
+   * Owner-declared liquid cash on hand, entered manually — the app can't see
+   * the real bank balance, only what flows through its own data. This is the
+   * baseline the finance page builds its treasury and runway figures on; the
+   * owner re-enters it whenever it drifts from reality.
+   */
+  startingCash: number
 }
 
 const DEFAULTS: StoreSettings = {
@@ -22,6 +29,7 @@ const DEFAULTS: StoreSettings = {
   reorderDaysDefault: 7,
   bonusPoolRate: 0.1,
   referralRewardAmount: 20,
+  startingCash: 0,
 }
 
 export async function getSettings(): Promise<StoreSettings> {
@@ -40,6 +48,7 @@ export async function getSettings(): Promise<StoreSettings> {
     reorderDaysDefault: Number(map.reorder_days_default ?? DEFAULTS.reorderDaysDefault),
     bonusPoolRate: Number(map.bonus_pool_rate ?? DEFAULTS.bonusPoolRate),
     referralRewardAmount: Number(map.referral_reward_amount ?? DEFAULTS.referralRewardAmount),
+    startingCash: Number(map.starting_cash ?? DEFAULTS.startingCash),
   }
 }
 
