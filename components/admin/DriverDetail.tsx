@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import type { Driver, DriverBonus } from '@/types/index'
+import type { Driver, DriverBonusGrant } from '@/types/index'
 
 interface Stats {
   lifetime_delivered_orders: number
@@ -21,9 +21,8 @@ interface OrderRow {
 
 interface BonusData {
   pool_balance: number
-  lifetime_delivered_orders: number
-  next_milestone: { orders: number; bonus: number } | null
-  awarded: DriverBonus[]
+  granted: DriverBonusGrant[]
+  unpaid_total: number
 }
 
 export function DriverDetail({ driverId }: { driverId: string }) {
@@ -31,7 +30,10 @@ export function DriverDetail({ driverId }: { driverId: string }) {
   const [stats, setStats] = useState<Stats | null>(null)
   const [orders, setOrders] = useState<OrderRow[]>([])
   const [bonuses, setBonuses] = useState<BonusData | null>(null)
-  const [markingPaidId, setMarkingPaidId] = useState<string | null>(null)
+  const [amount, setAmount] = useState('')
+  const [note, setNote] = useState('')
+  const [granting, setGranting] = useState(false)
+  const [grantError, setGrantError] = useState<string | null>(null)
 
   const load = () => {
     fetch(`/api/admin/drivers/${driverId}`)
@@ -46,13 +48,24 @@ export function DriverDetail({ driverId }: { driverId: string }) {
 
   useEffect(load, [driverId])
 
-  const markPaid = async (bonusId: string) => {
-    setMarkingPaidId(bonusId)
+  const grant = async () => {
+    setGranting(true)
+    setGrantError(null)
     try {
-      const res = await fetch(`/api/admin/driver-bonuses/${bonusId}`, { method: 'PATCH' })
-      if (res.ok) load()
+      const res = await fetch('/api/admin/driver-pool', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ driver_ids: [driverId], amount: Number(amount), note }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Failed to grant bonus')
+      setAmount('')
+      setNote('')
+      load()
+    } catch (err) {
+      setGrantError(err instanceof Error ? err.message : 'Failed to grant bonus')
     } finally {
-      setMarkingPaidId(null)
+      setGranting(false)
     }
   }
 
@@ -78,75 +91,83 @@ export function DriverDetail({ driverId }: { driverId: string }) {
       </div>
 
       <div className="rounded-xl border border-neutral-200 bg-white p-4">
-        <h2 className="mb-3 text-sm font-semibold">Milestone bonuses</h2>
+        <h2 className="mb-3 text-sm font-semibold">Bonuses</h2>
 
         {driver.is_owner ? (
           <p className="text-sm text-neutral-600">
-            The owner doesn&apos;t earn milestone bonuses — self-delivered orders already keep 100% of the margin, so
-            there&apos;s no separate payout to incentivize.
+            The owner doesn&apos;t earn bonuses — self-delivered orders already keep 100% of the margin, so there&apos;s
+            no separate payout to incentivize.
           </p>
         ) : (
           <>
             <div className="mb-3 grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
               <div>
-                <p className="text-xs text-neutral-600">Bonus pool balance</p>
-                <p className="font-semibold">${bonuses.pool_balance.toFixed(2)}</p>
-              </div>
-              <div>
-                <p className="text-xs text-neutral-600">Lifetime delivered orders</p>
-                <p className="font-semibold">{bonuses.lifetime_delivered_orders}</p>
-              </div>
-              {bonuses.next_milestone && (
-                <div>
-                  <p className="text-xs text-neutral-600">Next milestone</p>
-                  <p className="font-semibold">
-                    {bonuses.next_milestone.orders} orders → ${bonuses.next_milestone.bonus.toFixed(2)}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {bonuses.next_milestone && (
-              <div className="mb-3">
-                <div className="h-2 w-full overflow-hidden rounded-full bg-neutral-100">
-                  <div
-                    className="h-full rounded-full bg-black transition-all"
-                    style={{ width: `${Math.min((bonuses.lifetime_delivered_orders / bonuses.next_milestone.orders) * 100, 100)}%` }}
-                  />
-                </div>
-                <p className="mt-1 text-xs text-neutral-600">
-                  {bonuses.lifetime_delivered_orders} / {bonuses.next_milestone.orders} orders
+                <p className="text-xs text-neutral-600">Pool budget (shared)</p>
+                <p className={`font-semibold ${bonuses.pool_balance < 0 ? 'text-red-600' : ''}`}>
+                  ${bonuses.pool_balance.toFixed(2)}
                 </p>
               </div>
-            )}
+              <div>
+                <p className="text-xs text-neutral-600">Unpaid bonuses (this driver)</p>
+                <p className="font-semibold">${bonuses.unpaid_total.toFixed(2)}</p>
+              </div>
+            </div>
+
+            <div className="mb-4 rounded-lg bg-neutral-50 p-3">
+              <p className="mb-2 text-xs font-medium text-neutral-700">Grant a bonus from the pool</p>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="Amount $"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-base sm:w-28 sm:text-xs"
+                />
+                <input
+                  placeholder="Note (optional)"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-base sm:flex-1 sm:text-xs"
+                />
+                <button
+                  onClick={grant}
+                  disabled={granting || !(Number(amount) > 0)}
+                  className="rounded-lg bg-black px-4 py-2 text-xs font-medium text-white disabled:opacity-50"
+                >
+                  {granting ? 'Granting…' : 'Grant'}
+                </button>
+              </div>
+              {grantError && <p className="mt-2 text-xs text-red-600">{grantError}</p>}
+              <p className="mt-2 text-[11px] text-neutral-500">
+                Paid with the driver&apos;s next settlement. Draws from the shared pool budget (can go negative — that&apos;s
+                you committing more than you&apos;ve set aside).
+              </p>
+            </div>
 
             <div className="flex flex-col gap-2 text-xs">
-              {bonuses.awarded.map((b) => (
-                <div key={b.id} className="flex items-center justify-between border-b border-neutral-100 pb-2">
+              {bonuses.granted.map((g) => (
+                <div key={g.id} className="flex items-center justify-between border-b border-neutral-100 pb-2">
                   <div>
-                    <p className="font-medium">{b.milestone_orders} orders milestone</p>
+                    <p className="font-medium">{g.note || 'Bonus'}</p>
                     <p className="text-neutral-600">
-                      Earned {new Date(b.created_at).toLocaleDateString()}
-                      {b.paid_out && b.paid_out_at ? ` · paid ${new Date(b.paid_out_at).toLocaleDateString()}` : ''}
+                      Granted {new Date(g.created_at).toLocaleDateString()}
+                      {g.paid_out && g.paid_out_at ? ` · paid ${new Date(g.paid_out_at).toLocaleDateString()}` : ''}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <p className="font-semibold">${b.bonus_amount.toFixed(2)}</p>
-                    {b.paid_out ? (
+                    <p className="font-semibold">${g.amount.toFixed(2)}</p>
+                    {g.paid_out ? (
                       <span className="rounded-full bg-green-100 px-2 py-1 text-[10px] font-medium text-green-800">Paid</span>
+                    ) : g.settlement_id ? (
+                      <span className="rounded-full bg-blue-100 px-2 py-1 text-[10px] font-medium text-blue-800">In settlement</span>
                     ) : (
-                      <button
-                        disabled={markingPaidId === b.id}
-                        onClick={() => markPaid(b.id)}
-                        className="rounded-lg bg-black px-3 py-1.5 text-[10px] font-medium text-white disabled:opacity-50"
-                      >
-                        {markingPaidId === b.id ? 'Marking…' : 'Mark paid'}
-                      </button>
+                      <span className="rounded-full bg-amber-100 px-2 py-1 text-[10px] font-medium text-amber-800">Pending</span>
                     )}
                   </div>
                 </div>
               ))}
-              {bonuses.awarded.length === 0 && <p className="text-neutral-600">No milestones reached yet.</p>}
+              {bonuses.granted.length === 0 && <p className="text-neutral-600">No bonuses granted yet.</p>}
             </div>
           </>
         )}

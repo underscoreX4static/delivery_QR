@@ -5,6 +5,7 @@ import {
   OWNER_PROFIT_SHARE,
 } from '@/lib/calculations'
 import { computeEarnings, type EarningsSummary } from '@/lib/earnings'
+import { getPoolBalance, getTotalUnpaidGrants } from '@/lib/driver-pool'
 import { getSettings } from '@/lib/settings'
 import { getBrisbanePeriodStart, type EarningsPeriod } from '@/lib/store-hours'
 import type { Order, OrderItem } from '@/types/index'
@@ -40,9 +41,9 @@ export interface FinanceRates {
 }
 
 export interface FinancePools {
-  /** Σ drivers.bonus_pool_balance — owner net already provisioned toward driver milestone bonuses. */
+  /** Global driver bonus pool budget still available to grant (settings.driver_pool_balance). */
   driverPoolSetAside: number
-  /** Unpaid driver milestone bonuses — the hard, already-awarded obligation the pool above is meant to cover. */
+  /** Unpaid driver bonus grants — bonuses already handed out from the pool, awaiting settlement. */
   driverBonusesOwed: number
   /** Unpaid affiliate commissions across all commercials. */
   commissionsOwed: number
@@ -85,8 +86,8 @@ export interface FinanceGrowth {
   weeklyBurn: number
   burnBreakdown: {
     referralCredits: number
-    driverBonuses: number
-    bonusPoolContributions: number
+    /** Owner net set aside into the driver pool per week — the driver-bonus growth spend. */
+    driverPoolContributions: number
     discountsGranted: number
   }
   /** availableCashNoBFR / weeklyBurn — optimistic runway. Infinity-safe: null when burn is ~0. */
@@ -108,8 +109,6 @@ export interface FinanceSimBasis {
   weeklyPoolableOwnerNet: number
   /** Approved referral pairs per week — each pair costs 2 × referralRewardAmount when the reward changes. */
   weeklyReferralPairs: number
-  /** Driver milestone bonuses per week — lumpy and rate-less, held fixed in the sim. */
-  weeklyDriverBonuses: number
   /** Discounts granted per week under the current tiers — held fixed unless a promo slider adds to it. */
   weeklyDiscounts: number
   availableCashNoBFR: number
@@ -152,16 +151,16 @@ export async function computeFinanceSnapshot(period: EarningsPeriod): Promise<Fi
   const earnings = await computeEarnings(start)
 
   const [
-    driverPoolAgg,
-    unpaidBonuses,
+    driverPoolSetAside,
+    driverBonusesOwed,
     unpaidCommissions,
     creditFloatRows,
     activeBatches,
     activePartners,
     allCommissions,
   ] = await Promise.all([
-    supabaseAdmin.from('drivers').select('bonus_pool_balance'),
-    supabaseAdmin.from('driver_bonuses').select('bonus_amount').eq('paid_out', false),
+    getPoolBalance(),
+    getTotalUnpaidGrants(),
     supabaseAdmin.from('affiliate_commissions').select('commission_amount').eq('paid_out', false),
     supabaseAdmin.from('users').select('credit_balance'),
     supabaseAdmin.from('product_batches').select('quantity_remaining, cost_price').eq('is_active', true),
@@ -172,10 +171,6 @@ export async function computeFinanceSnapshot(period: EarningsPeriod): Promise<Fi
     supabaseAdmin.from('affiliate_commissions').select('partner_id'),
   ])
 
-  const driverPoolSetAside = round2(
-    (driverPoolAgg.data ?? []).reduce((s, d) => s + (d.bonus_pool_balance ?? 0), 0)
-  )
-  const driverBonusesOwed = round2((unpaidBonuses.data ?? []).reduce((s, b) => s + b.bonus_amount, 0))
   const commissionsOwed = round2((unpaidCommissions.data ?? []).reduce((s, c) => s + c.commission_amount, 0))
   const referralCreditFloat = round2((creditFloatRows.data ?? []).reduce((s, u) => s + (u.credit_balance ?? 0), 0))
   const stockValue = round2(
@@ -235,10 +230,11 @@ export async function computeFinanceSnapshot(period: EarningsPeriod): Promise<Fi
   // Trailing-window burn + acquisition.
   const window = await computeWindow(windowStart, settings.bonusPoolRate)
 
-  const weeklyBurn = round2(
-    (window.referralCredits + window.driverBonuses + window.bonusPoolContributions + window.discountsGranted) /
-      WEEKS_IN_WINDOW
-  )
+  // Burn = growth margin given up. The pool contribution is the driver-bonus
+  // spend (grants just disburse what's already set aside, so counting them too
+  // would double-count). Referral credits and discounts are direct spend.
+  const windowBurn = window.referralCredits + window.bonusPoolContributions + window.discountsGranted
+  const weeklyBurn = round2(windowBurn / WEEKS_IN_WINDOW)
 
   const growth: FinanceGrowth = {
     windowDays: BURN_WINDOW_DAYS,
@@ -247,26 +243,18 @@ export async function computeFinanceSnapshot(period: EarningsPeriod): Promise<Fi
     weeklyBurn,
     burnBreakdown: {
       referralCredits: round2(window.referralCredits / WEEKS_IN_WINDOW),
-      driverBonuses: round2(window.driverBonuses / WEEKS_IN_WINDOW),
-      bonusPoolContributions: round2(window.bonusPoolContributions / WEEKS_IN_WINDOW),
+      driverPoolContributions: round2(window.bonusPoolContributions / WEEKS_IN_WINDOW),
       discountsGranted: round2(window.discountsGranted / WEEKS_IN_WINDOW),
     },
     runwayWeeksNoBFR: weeklyBurn > 0.01 ? round2(availableCashNoBFR / weeklyBurn) : null,
     runwayWeeksWithBFR: weeklyBurn > 0.01 ? round2(availableCashWithBFR / weeklyBurn) : null,
-    costPerNewCustomer:
-      window.newCustomers > 0
-        ? round2(
-            (window.referralCredits + window.driverBonuses + window.bonusPoolContributions + window.discountsGranted) /
-              window.newCustomers
-          )
-        : null,
+    costPerNewCustomer: window.newCustomers > 0 ? round2(windowBurn / window.newCustomers) : null,
   }
 
   const simBasis: FinanceSimBasis = {
     weeklyRevenue: round2(window.grossRevenue / WEEKS_IN_WINDOW),
     weeklyPoolableOwnerNet: round2(window.poolableOwnerNet / WEEKS_IN_WINDOW),
     weeklyReferralPairs: round2(window.referralPairs / WEEKS_IN_WINDOW),
-    weeklyDriverBonuses: round2(window.driverBonuses / WEEKS_IN_WINDOW),
     weeklyDiscounts: round2(window.discountsGranted / WEEKS_IN_WINDOW),
     availableCashNoBFR,
     availableCashWithBFR,
@@ -351,7 +339,6 @@ interface WindowFigures {
   discountsGranted: number
   referralCredits: number
   referralPairs: number
-  driverBonuses: number
   bonusPoolContributions: number
   newCustomers: number
   activeBuyers: number
@@ -361,13 +348,11 @@ interface WindowFigures {
 async function computeWindow(windowStart: Date, bonusPoolRate: number): Promise<WindowFigures> {
   const iso = windowStart.toISOString()
 
-  const [{ data: orders }, { data: approvedReferrals }, { data: windowBonuses }, { count: newCustomers }] =
-    await Promise.all([
-      supabaseAdmin.from('orders').select('*').eq('status', 'delivered').gte('created_at', iso),
-      supabaseAdmin.from('referrals').select('reward_amount').eq('status', 'approved').gte('reviewed_at', iso),
-      supabaseAdmin.from('driver_bonuses').select('bonus_amount').gte('created_at', iso),
-      supabaseAdmin.from('users').select('id', { count: 'exact', head: true }).gte('created_at', iso),
-    ])
+  const [{ data: orders }, { data: approvedReferrals }, { count: newCustomers }] = await Promise.all([
+    supabaseAdmin.from('orders').select('*').eq('status', 'delivered').gte('created_at', iso),
+    supabaseAdmin.from('referrals').select('reward_amount').eq('status', 'approved').gte('reviewed_at', iso),
+    supabaseAdmin.from('users').select('id', { count: 'exact', head: true }).gte('created_at', iso),
+  ])
 
   const deliveredOrders = (orders as Order[]) ?? []
   const orderIds = deliveredOrders.map((o) => o.id)
@@ -416,7 +401,6 @@ async function computeWindow(windowStart: Date, bonusPoolRate: number): Promise<
   const referralPairs = (approvedReferrals ?? []).length
   // Both sides are credited, so cash committed = reward × 2 per approved pair.
   const referralCredits = (approvedReferrals ?? []).reduce((s, r) => s + r.reward_amount * 2, 0)
-  const driverBonuses = (windowBonuses ?? []).reduce((s, b) => s + b.bonus_amount, 0)
   const bonusPoolContributions = Math.max(0, poolableOwnerNet) * bonusPoolRate
 
   return {
@@ -425,7 +409,6 @@ async function computeWindow(windowStart: Date, bonusPoolRate: number): Promise<
     discountsGranted: round2(discountsGranted),
     referralCredits: round2(referralCredits),
     referralPairs,
-    driverBonuses: round2(driverBonuses),
     bonusPoolContributions: round2(bonusPoolContributions),
     newCustomers: newCustomers ?? 0,
     activeBuyers: buyerIds.size,

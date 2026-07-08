@@ -57,8 +57,7 @@ interface Snapshot {
     weeklyBurn: number
     burnBreakdown: {
       referralCredits: number
-      driverBonuses: number
-      bonusPoolContributions: number
+      driverPoolContributions: number
       discountsGranted: number
     }
     runwayWeeksNoBFR: number | null
@@ -69,7 +68,6 @@ interface Snapshot {
     weeklyRevenue: number
     weeklyPoolableOwnerNet: number
     weeklyReferralPairs: number
-    weeklyDriverBonuses: number
     weeklyDiscounts: number
     availableCashNoBFR: number
     availableCashWithBFR: number
@@ -167,8 +165,8 @@ export function FinanceBoard() {
 
           <Card title="Argent engagé (pools)">
             <div className="flex flex-col divide-y divide-neutral-100">
-              <PoolRow label="Cagnottes livreurs (provisionné)" value={pools.driverPoolSetAside} muted />
-              <PoolRow label="Primes livreurs dues" value={pools.driverBonusesOwed} />
+              <PoolRow label="Budget pool livreurs (dispo à donner)" value={pools.driverPoolSetAside} muted />
+              <PoolRow label="Bonus livreurs attribués, non payés" value={pools.driverBonusesOwed} />
               <PoolRow label="Commissions commerciales dues" value={pools.commissionsOwed} />
               <PoolRow label="Primes de bienvenue dues" value={pools.welcomeBonusesOwed} />
               <PoolRow label="Crédits parrainage en circulation" value={pools.referralCreditFloat} muted />
@@ -277,7 +275,7 @@ function Simulator({ snap }: { snap: Snapshot }) {
     const bonusPoolBurn = simBasis.weeklyPoolableOwnerNet * bonusPoolRate
     const promoBurn = simBasis.weeklyRevenue * promoRate
     const weeklyBurn =
-      referralBurn + bonusPoolBurn + simBasis.weeklyDriverBonuses + simBasis.weeklyDiscounts + promoBurn
+      referralBurn + bonusPoolBurn + simBasis.weeklyDiscounts + promoBurn
 
     const runwayNoBFR = weeklyBurn > 0.01 ? simBasis.availableCashNoBFR / weeklyBurn : null
     const runwayWithBFR = weeklyBurn > 0.01 ? simBasis.availableCashWithBFR / weeklyBurn : null

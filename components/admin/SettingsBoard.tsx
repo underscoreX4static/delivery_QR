@@ -189,8 +189,9 @@ export function SettingsBoard() {
           />
         </Field>
         <p className="mt-2 text-xs text-neutral-600">
-          On every delivered order handled by a non-owner driver, this share of your net profit is set aside into that
-          driver&apos;s bonus pool, funding their milestone bonuses. It comes out of your take-home — see the split on{' '}
+          On every delivered order handled by a non-owner driver, this share of your net profit is set aside into one
+          shared pool budget. You then grant fixed bonuses from that budget to any driver(s) from the Drivers page —
+          paid out with their settlement. It comes out of your take-home; see the split on{' '}
           <a href="/admin/finance" className="underline">
             /admin/finance
           </a>

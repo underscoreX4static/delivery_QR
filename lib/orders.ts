@@ -2,7 +2,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { commitConsumption, refundConsumption } from '@/lib/inventory'
 import { calculateBonusPoolContribution, calculatePayout } from '@/lib/calculations'
 import { getSettings } from '@/lib/settings'
-import { contributeToBonusPool, checkAndAwardMilestones } from '@/lib/driver-bonuses'
+import { contributeToPool } from '@/lib/driver-pool'
 import { notifyOwner, sendMessage } from '@/lib/telegram'
 import type { Order, OrderItem, OrderStatus } from '@/types/index'
 
@@ -153,8 +153,11 @@ export async function markDelivered(orderId: string, changedBy: string): Promise
     }
   }
 
-  // Driver milestone bonus pool — independent of partner attribution, since
-  // the driver earns this for the delivery itself, not for who referred it.
+  // Fund the GLOBAL driver bonus pool — a share of owner net is set aside on
+  // every non-owner-driver delivery. The owner later grants discretionary
+  // bonuses from this budget (see lib/driver-pool.ts). Nothing is tied to a
+  // specific driver here; the driver's own cut is the delivery-fee + 38%
+  // payout, untouched.
   if (order.driver_id) {
     try {
       const [items, settings, driver] = await Promise.all([
@@ -178,13 +181,12 @@ export async function markDelivered(orderId: string, changedBy: string): Promise
         })
 
         const contribution = calculateBonusPoolContribution(payout.ownerNet, settings.bonusPoolRate)
-        await contributeToBonusPool(order.driver_id, contribution)
-        await checkAndAwardMilestones(order.driver_id)
+        await contributeToPool(contribution)
       }
     } catch (err) {
-      console.error(`Driver bonus pool update failed for order ${orderId}:`, err)
+      console.error(`Driver pool contribution failed for order ${orderId}:`, err)
       await notifyOwner(
-        `⚠️ Order #${orderId.slice(0, 8)} delivered but its driver bonus pool update failed — check manually.`
+        `⚠️ Order #${orderId.slice(0, 8)} delivered but its driver pool contribution failed — check manually.`
       ).catch(() => {})
     }
   }

@@ -145,6 +145,7 @@ export interface Driver {
   bonus_pool_balance?: number
 }
 
+/** @deprecated Legacy fixed-milestone bonuses. No longer awarded — replaced by DriverBonusGrant. Kept so any historical rows stay readable/payable. */
 export interface DriverBonus {
   id: string
   driver_id: string
@@ -152,6 +153,23 @@ export interface DriverBonus {
   bonus_amount: number
   paid_out: boolean
   paid_out_at: string | null
+  created_at: string
+}
+
+/**
+ * A discretionary bonus the owner grants to a driver, drawn from the global
+ * driver pool budget (settings key `driver_pool_balance`). Paid out with the
+ * driver's cash settlement.
+ * Requires migration 007_driver_pool_grants.sql.
+ */
+export interface DriverBonusGrant {
+  id: string
+  driver_id: string
+  amount: number
+  note: string | null
+  paid_out: boolean
+  paid_out_at: string | null
+  settlement_id: string | null
   created_at: string
 }
 

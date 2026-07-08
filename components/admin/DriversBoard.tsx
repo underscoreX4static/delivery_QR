@@ -10,8 +10,138 @@ interface AdminDriver extends Driver {
   lifetime_delivered_orders: number
 }
 
+function DriverPoolPanel({
+  balance,
+  drivers,
+  onGranted,
+}: {
+  balance: number | null
+  drivers: AdminDriver[]
+  onGranted: () => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [amount, setAmount] = useState('')
+  const [note, setNote] = useState('')
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [granting, setGranting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [done, setDone] = useState<string | null>(null)
+
+  const toggle = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+
+  const allSelected = drivers.length > 0 && selected.size === drivers.length
+  const selectAll = () => setSelected(allSelected ? new Set() : new Set(drivers.map((d) => d.id)))
+
+  const grant = async () => {
+    setGranting(true)
+    setError(null)
+    setDone(null)
+    try {
+      const res = await fetch('/api/admin/driver-pool', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ driver_ids: [...selected], amount: Number(amount), note }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Failed to grant')
+      setDone(`Granted $${Number(amount).toFixed(2)} to ${data.granted} driver(s) — $${data.total.toFixed(2)} from the pool.`)
+      setAmount('')
+      setNote('')
+      setSelected(new Set())
+      onGranted()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to grant')
+    } finally {
+      setGranting(false)
+    }
+  }
+
+  const total = Number(amount) > 0 ? Number(amount) * selected.size : 0
+
+  return (
+    <div className="rounded-xl border border-neutral-200 bg-white p-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-xs text-neutral-600">Driver bonus pool budget</p>
+          <p className={`text-2xl font-semibold ${balance !== null && balance < 0 ? 'text-red-600' : ''}`}>
+            {balance === null ? '…' : `$${balance.toFixed(2)}`}
+          </p>
+        </div>
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="rounded-lg bg-black px-4 py-2 text-xs font-medium text-white"
+        >
+          {open ? 'Close' : 'Grant bonus'}
+        </button>
+      </div>
+
+      {open && (
+        <div className="mt-4 border-t border-neutral-100 pt-4">
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <input
+              type="number"
+              step="0.01"
+              placeholder="Amount $ / driver"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-base sm:w-40 sm:text-xs"
+            />
+            <input
+              placeholder="Note (optional)"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-base sm:flex-1 sm:text-xs"
+            />
+          </div>
+
+          <div className="mt-3 flex items-center justify-between">
+            <p className="text-xs font-medium text-neutral-700">Recipients</p>
+            <button onClick={selectAll} className="text-xs text-blue-600">
+              {allSelected ? 'Clear all' : 'Select all'}
+            </button>
+          </div>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {drivers.map((d) => (
+              <button
+                key={d.id}
+                onClick={() => toggle(d.id)}
+                className={`rounded-full px-3 py-1.5 text-xs font-medium ${
+                  selected.has(d.id) ? 'bg-black text-white' : 'bg-neutral-100 text-neutral-700'
+                }`}
+              >
+                {d.first_name} {d.last_name ?? ''}
+              </button>
+            ))}
+            {drivers.length === 0 && <p className="text-xs text-neutral-600">No non-owner drivers yet.</p>}
+          </div>
+
+          {error && <p className="mt-3 text-xs text-red-600">{error}</p>}
+          {done && <p className="mt-3 text-xs text-green-700">{done}</p>}
+
+          <button
+            onClick={grant}
+            disabled={granting || selected.size === 0 || !(Number(amount) > 0)}
+            className="mt-3 w-full rounded-lg bg-black py-2.5 text-xs font-medium text-white disabled:opacity-50 sm:w-auto sm:px-4"
+          >
+            {granting
+              ? 'Granting…'
+              : `Grant${total > 0 ? ` $${total.toFixed(2)} total (${selected.size})` : ''}`}
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function DriversBoard() {
   const [drivers, setDrivers] = useState<AdminDriver[]>([])
+  const [poolBalance, setPoolBalance] = useState<number | null>(null)
   const [showNewForm, setShowNewForm] = useState(false)
   const [telegramId, setTelegramId] = useState('')
   const [firstName, setFirstName] = useState('')
@@ -19,7 +149,10 @@ export function DriversBoard() {
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
-  const load = () => fetch('/api/admin/drivers').then((r) => r.json()).then((d) => setDrivers(d.drivers ?? []))
+  const load = () => {
+    fetch('/api/admin/drivers').then((r) => r.json()).then((d) => setDrivers(d.drivers ?? []))
+    fetch('/api/admin/driver-pool').then((r) => r.json()).then((d) => setPoolBalance(d.balance ?? 0))
+  }
 
   useEffect(() => {
     load()
@@ -57,8 +190,12 @@ export function DriversBoard() {
     }
   }
 
+  const eligibleDrivers = drivers.filter((d) => !d.is_owner)
+
   return (
     <div className="flex flex-col gap-4">
+      <DriverPoolPanel balance={poolBalance} drivers={eligibleDrivers} onGranted={load} />
+
       <Leaderboard
         title="Top drivers"
         countLabel="deliveries"

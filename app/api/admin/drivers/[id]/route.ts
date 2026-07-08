@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { clearDriverCommands, setDriverCommands } from '@/lib/telegram'
-import { getDriverBonuses } from '@/lib/driver-bonuses'
-import { DRIVER_BONUS_MILESTONES, calculatePayout } from '@/lib/calculations'
+import { getDriverGrants, getPoolBalance } from '@/lib/driver-pool'
+import { calculatePayout } from '@/lib/calculations'
 import type { OrderItem } from '@/types/index'
 
 const ACTIVE_ORDER_STATUSES = ['pending', 'confirmed', 'preparing', 'on_the_way']
@@ -22,9 +22,10 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ id
   const { data: driver, error } = await supabaseAdmin.from('drivers').select('*').eq('id', id).single()
   if (error || !driver) return NextResponse.json({ error: 'Driver not found' }, { status: 404 })
 
-  const [{ data: orders }, bonuses] = await Promise.all([
+  const [{ data: orders }, grants, poolBalance] = await Promise.all([
     supabaseAdmin.from('orders').select('*, users(first_name, last_name)').eq('driver_id', id).order('created_at', { ascending: false }),
-    getDriverBonuses(id),
+    getDriverGrants(id),
+    getPoolBalance(),
   ])
 
   const deliveredOrders = (orders ?? []).filter((o) => o.status === 'delivered')
@@ -79,10 +80,9 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ id
     },
     orders: ordersTable,
     bonuses: {
-      pool_balance: driver.bonus_pool_balance ?? 0,
-      lifetime_delivered_orders: lifetimeDeliveredOrders,
-      next_milestone: DRIVER_BONUS_MILESTONES.find((m) => m.orders > lifetimeDeliveredOrders) ?? null,
-      awarded: bonuses,
+      pool_balance: poolBalance,
+      granted: grants,
+      unpaid_total: Math.round(grants.filter((g) => !g.paid_out).reduce((s, g) => s + g.amount, 0) * 100) / 100,
     },
   })
 }

@@ -1,6 +1,7 @@
 import { supabaseAdmin } from '@/lib/supabase'
 import { calculatePayout } from '@/lib/calculations'
 import { getBrisbaneDateString } from '@/lib/store-hours'
+import { getUnsettledGrants, markSettlementGrantsPaid } from '@/lib/driver-pool'
 import { notifyOwner, sendMessage } from '@/lib/telegram'
 import type { OrderItem, Settlement } from '@/types/index'
 
@@ -52,14 +53,20 @@ export async function createDriverSettlement(driverId: string, proposedBy: strin
   const settled = await alreadySettledOrderIds()
   const eligibleOrders = (orders ?? []).filter((o) => !settled.has(o.id))
 
-  if (eligibleOrders.length === 0) {
-    return { ok: false, error: 'No unsettled delivered orders for this driver' }
+  // Discretionary bonuses the owner granted from the pool that haven't been
+  // settled yet — paid out together with the cash share, in the same
+  // settlement, so the driver gets one figure and one detailed breakdown.
+  const grants = await getUnsettledGrants(driverId)
+  const grantsTotal = grants.reduce((sum, g) => sum + g.amount, 0)
+
+  if (eligibleOrders.length === 0 && grants.length === 0) {
+    return { ok: false, error: 'No unsettled deliveries or bonuses for this driver' }
   }
 
   const costOfGoodsMap = await costOfGoodsByOrder(eligibleOrders.map((o) => o.id))
 
   let totalCash = 0
-  let payoutAmount = 0
+  let cashShare = 0
   for (const order of eligibleOrders) {
     const costOfGoods = costOfGoodsMap.get(order.id) ?? 0
     const payout = calculatePayout({
@@ -72,12 +79,15 @@ export async function createDriverSettlement(driverId: string, proposedBy: strin
       partnerCommissionRate: 0,
     })
     totalCash += order.total
-    payoutAmount += payout.driverPayout
+    cashShare += payout.driverPayout
   }
 
+  const payoutAmount = cashShare + grantsTotal
+
+  // Period spans the orders; fall back to today when it's a bonus-only settlement.
   const orderDates = eligibleOrders.map((o) => getBrisbaneDateString(new Date(o.created_at))).sort()
-  const periodStart = orderDates[0]
-  const periodEnd = orderDates[orderDates.length - 1]
+  const periodStart = orderDates[0] ?? getBrisbaneDateString(new Date())
+  const periodEnd = orderDates[orderDates.length - 1] ?? periodStart
 
   const { data: settlement, error } = await supabaseAdmin
     .from('settlements')
@@ -96,16 +106,33 @@ export async function createDriverSettlement(driverId: string, proposedBy: strin
 
   if (error || !settlement) return { ok: false, error: error?.message ?? 'Failed to create settlement' }
 
-  await supabaseAdmin
-    .from('settlement_orders')
-    .insert(eligibleOrders.map((o) => ({ settlement_id: settlement.id, order_id: o.id })))
+  if (eligibleOrders.length > 0) {
+    await supabaseAdmin
+      .from('settlement_orders')
+      .insert(eligibleOrders.map((o) => ({ settlement_id: settlement.id, order_id: o.id })))
+  }
+
+  // Freeze exactly these grants into the settlement so bonuses granted after
+  // this point don't leak into a settlement the driver already reviewed.
+  if (grants.length > 0) {
+    await supabaseAdmin
+      .from('driver_bonus_grants')
+      .update({ settlement_id: settlement.id })
+      .in('id', grants.map((g) => g.id))
+  }
 
   const periodLabel = periodStart === periodEnd ? `on ${periodStart}` : `${periodStart} to ${periodEnd}`
+  const cashLine =
+    eligibleOrders.length > 0
+      ? `You collected $${round2(totalCash).toFixed(2)} ${periodLabel} (${eligibleOrders.length} deliveries). Cash share: $${round2(cashShare).toFixed(2)}.`
+      : 'No new deliveries this settlement.'
+  const bonusLine = grantsTotal > 0 ? `\n🎁 Bonuses: $${round2(grantsTotal).toFixed(2)} (${grants.length}).` : ''
 
   await sendMessage(
     driver.telegram_id,
-    `💰 Settlement — you collected $${settlement.total_cash.toFixed(2)} ${periodLabel} (${eligibleOrders.length} deliveries). Your share: $${settlement.payout_amount.toFixed(2)}. Do you confirm?`,
+    `💰 Settlement — ${cashLine}${bonusLine}\n\n*Total due: $${round2(payoutAmount).toFixed(2)}.* Do you confirm?`,
     {
+      parse_mode: 'Markdown',
       reply_markup: {
         inline_keyboard: [
           [
@@ -260,6 +287,9 @@ export async function markSettlementPaid(settlementId: string): Promise<Result> 
         .eq('paid_out', false)
     }
   } else if (settlement.driver_id) {
+    // Bonuses frozen into this settlement are disbursed now that it's paid.
+    await markSettlementGrantsPaid(settlementId)
+
     const { data: driver } = await supabaseAdmin
       .from('drivers')
       .select('telegram_id')
