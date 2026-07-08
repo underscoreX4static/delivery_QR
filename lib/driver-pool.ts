@@ -78,16 +78,16 @@ export async function grantBonus(driverIds: string[], amount: number, note: stri
   if (recipients.length === 0) return { ok: false, granted: 0, total: 0, newBalance: 0, error: 'No recipients' }
   if (!(amount > 0)) return { ok: false, granted: 0, total: 0, newBalance: 0, error: 'Amount must be positive' }
 
-  // Owner drivers never earn bonuses (they keep 100% of their own margin).
+  // The owner can grant to themselves too — moving pool money into an owner
+  // payable is a wash economically, but it's the owner's call to make.
   const { data: validDrivers } = await supabaseAdmin
     .from('drivers')
     .select('id, telegram_id, first_name, is_owner')
     .in('id', recipients)
-    .eq('is_owner', false)
 
   const targets = validDrivers ?? []
   if (targets.length === 0) {
-    return { ok: false, granted: 0, total: 0, newBalance: await getPoolBalance(), error: 'No eligible (non-owner) drivers' }
+    return { ok: false, granted: 0, total: 0, newBalance: await getPoolBalance(), error: 'No matching drivers' }
   }
 
   const total = round2(amount * targets.length)

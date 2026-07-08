@@ -190,11 +190,9 @@ export function DriversBoard() {
     }
   }
 
-  const eligibleDrivers = drivers.filter((d) => !d.is_owner)
-
   return (
     <div className="flex flex-col gap-4">
-      <DriverPoolPanel balance={poolBalance} drivers={eligibleDrivers} onGranted={load} />
+      <DriverPoolPanel balance={poolBalance} drivers={drivers} onGranted={load} />
 
       <Leaderboard
         title="Top drivers"

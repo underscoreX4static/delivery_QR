@@ -93,13 +93,13 @@ export function DriverDetail({ driverId }: { driverId: string }) {
       <div className="rounded-xl border border-neutral-200 bg-white p-4">
         <h2 className="mb-3 text-sm font-semibold">Bonuses</h2>
 
-        {driver.is_owner ? (
-          <p className="text-sm text-neutral-600">
-            The owner doesn&apos;t earn bonuses — self-delivered orders already keep 100% of the margin, so there&apos;s
-            no separate payout to incentivize.
-          </p>
-        ) : (
-          <>
+        <>
+            {driver.is_owner && (
+              <p className="mb-3 text-xs text-neutral-500">
+                You already keep 100% of the margin on your own deliveries — granting yourself a bonus just moves pool
+                money into a payable to yourself, but it&apos;s available if you want it.
+              </p>
+            )}
             <div className="mb-3 grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
               <div>
                 <p className="text-xs text-neutral-600">Pool budget (shared)</p>
@@ -169,8 +169,7 @@ export function DriverDetail({ driverId }: { driverId: string }) {
               ))}
               {bonuses.granted.length === 0 && <p className="text-neutral-600">No bonuses granted yet.</p>}
             </div>
-          </>
-        )}
+        </>
       </div>
 
       <div className="rounded-xl border border-neutral-200 bg-white p-4">
