@@ -11,6 +11,8 @@ interface EarningsSummary {
   driverPayouts: number
   affiliateCommissions: number
   ownerNet: number
+  bonusPoolContributions: number
+  ownerTakeHome: number
 }
 
 interface Snapshot {
@@ -65,7 +67,7 @@ interface Snapshot {
   }
   simBasis: {
     weeklyRevenue: number
-    weeklyPartnerOwnerNet: number
+    weeklyPoolableOwnerNet: number
     weeklyReferralPairs: number
     weeklyDriverBonuses: number
     weeklyDiscounts: number
@@ -201,8 +203,18 @@ export function FinanceBoard() {
             }
           >
             <div className="rounded-lg bg-neutral-900 p-4 text-white">
-              <p className="text-xs text-neutral-400">Bénéfice net (owner)</p>
-              <p className="text-3xl font-semibold">{money(snap.earnings.ownerNet)}</p>
+              <p className="text-xs text-neutral-400">Dans la poche (owner net après pool)</p>
+              <p className="text-3xl font-semibold">{money(snap.earnings.ownerTakeHome)}</p>
+              <div className="mt-2 flex flex-col gap-0.5 text-xs text-neutral-400">
+                <div className="flex justify-between">
+                  <span>Bénéf owner (avant pool)</span>
+                  <span className="text-neutral-200">{money(snap.earnings.ownerNet)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>− Mis dans le pool livreurs</span>
+                  <span className="text-amber-300">−{money(snap.earnings.bonusPoolContributions)}</span>
+                </div>
+              </div>
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
               <MiniStat label="Gross revenue" value={money(snap.earnings.grossRevenue)} />
@@ -210,6 +222,24 @@ export function FinanceBoard() {
               <MiniStat label="Driver payouts" value={money(snap.earnings.driverPayouts)} />
               <MiniStat label="Commissions" value={money(snap.earnings.affiliateCommissions)} />
             </div>
+          </Card>
+
+          <Card title={period === 'today' ? 'Répartition — clôture du jour' : 'Répartition de la période'}>
+            <p className="mb-3 text-xs text-neutral-500">
+              Où va chaque dollar de CA livré sur la période. Le pool est prélevé sur ta part avant ce qui te reste.
+            </p>
+            <Waterfall
+              rows={[
+                { label: 'CA livré (encaissé)', value: snap.earnings.grossRevenue },
+                { label: '− Coût des produits', value: -(snap.earnings.grossRevenue - snap.earnings.grossProfit), sign: '−' },
+                { label: '= Profit brut', value: snap.earnings.grossProfit, subtotal: true },
+                { label: '− Part livreurs (38% + livraison)', value: -snap.earnings.driverPayouts, sign: '−' },
+                { label: '− Commissions commerciaux', value: -snap.earnings.affiliateCommissions, sign: '−' },
+                { label: '= Bénéf owner', value: snap.earnings.ownerNet, subtotal: true },
+                { label: '− À mettre dans le pool livreurs', value: -snap.earnings.bonusPoolContributions, sign: '−' },
+                { label: '= Dans ta poche', value: snap.earnings.ownerTakeHome, subtotal: true, strong: true },
+              ]}
+            />
           </Card>
 
           <Card title="Taux actifs">
@@ -244,7 +274,7 @@ function Simulator({ snap }: { snap: Snapshot }) {
 
   const projected = useMemo(() => {
     const referralBurn = simBasis.weeklyReferralPairs * 2 * referralReward
-    const bonusPoolBurn = simBasis.weeklyPartnerOwnerNet * bonusPoolRate
+    const bonusPoolBurn = simBasis.weeklyPoolableOwnerNet * bonusPoolRate
     const promoBurn = simBasis.weeklyRevenue * promoRate
     const weeklyBurn =
       referralBurn + bonusPoolBurn + simBasis.weeklyDriverBonuses + simBasis.weeklyDiscounts + promoBurn

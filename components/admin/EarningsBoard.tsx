@@ -12,6 +12,8 @@ interface EarningsSummary {
   driverPayouts: number
   affiliateCommissions: number
   ownerNet: number
+  bonusPoolContributions: number
+  ownerTakeHome: number
 }
 
 interface DailyRevenuePoint {
@@ -64,9 +66,17 @@ export function EarningsBoard() {
         </div>
       )}
       {summary && (
-        <div className="rounded-xl border border-neutral-200 bg-white p-4">
-          <p className="text-xs text-neutral-600">Owner net</p>
-          <p className="text-2xl font-semibold">${summary.ownerNet.toFixed(2)}</p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-xl border border-neutral-200 bg-white p-4">
+            <p className="text-xs text-neutral-600">Owner net (avant pool)</p>
+            <p className="text-2xl font-semibold">${summary.ownerNet.toFixed(2)}</p>
+            <p className="mt-1 text-xs text-amber-700">− ${summary.bonusPoolContributions.toFixed(2)} mis dans le pool livreurs</p>
+          </div>
+          <div className="rounded-xl border border-neutral-900 bg-neutral-900 p-4 text-white">
+            <p className="text-xs text-neutral-400">Dans la poche</p>
+            <p className="text-2xl font-semibold">${summary.ownerTakeHome.toFixed(2)}</p>
+            <p className="mt-1 text-xs text-neutral-400">Ce qui te reste après avoir financé le pool</p>
+          </div>
         </div>
       )}
 

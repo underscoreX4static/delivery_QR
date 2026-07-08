@@ -104,8 +104,8 @@ export interface FinanceGrowth {
  */
 export interface FinanceSimBasis {
   weeklyRevenue: number
-  /** Owner net per week generated specifically on partner-attributed orders — the base the bonus-pool rate scales. */
-  weeklyPartnerOwnerNet: number
+  /** Owner net per week on non-owner-driver deliveries — the base the bonus-pool rate scales. */
+  weeklyPoolableOwnerNet: number
   /** Approved referral pairs per week — each pair costs 2 × referralRewardAmount when the reward changes. */
   weeklyReferralPairs: number
   /** Driver milestone bonuses per week — lumpy and rate-less, held fixed in the sim. */
@@ -264,7 +264,7 @@ export async function computeFinanceSnapshot(period: EarningsPeriod): Promise<Fi
 
   const simBasis: FinanceSimBasis = {
     weeklyRevenue: round2(window.grossRevenue / WEEKS_IN_WINDOW),
-    weeklyPartnerOwnerNet: round2(window.partnerOwnerNet / WEEKS_IN_WINDOW),
+    weeklyPoolableOwnerNet: round2(window.poolableOwnerNet / WEEKS_IN_WINDOW),
     weeklyReferralPairs: round2(window.referralPairs / WEEKS_IN_WINDOW),
     weeklyDriverBonuses: round2(window.driverBonuses / WEEKS_IN_WINDOW),
     weeklyDiscounts: round2(window.discountsGranted / WEEKS_IN_WINDOW),
@@ -346,7 +346,8 @@ async function computeCodInTransit(): Promise<number> {
 
 interface WindowFigures {
   grossRevenue: number
-  partnerOwnerNet: number
+  /** Owner net on non-owner-driver deliveries — the exact base the pool rate is applied to (mirrors markDelivered). */
+  poolableOwnerNet: number
   discountsGranted: number
   referralCredits: number
   referralPairs: number
@@ -372,7 +373,7 @@ async function computeWindow(windowStart: Date, bonusPoolRate: number): Promise<
   const orderIds = deliveredOrders.map((o) => o.id)
   const driverIds = [...new Set(deliveredOrders.map((o) => o.driver_id).filter((id): id is string => Boolean(id)))]
 
-  const [costMap, { data: drivers }, { data: commissions }, { data: qrCodes }] = await Promise.all([
+  const [costMap, { data: drivers }, { data: commissions }] = await Promise.all([
     costOfGoodsByOrder(orderIds),
     driverIds.length
       ? supabaseAdmin.from('drivers').select('id, is_owner').in('id', driverIds)
@@ -380,16 +381,14 @@ async function computeWindow(windowStart: Date, bonusPoolRate: number): Promise<
     orderIds.length
       ? supabaseAdmin.from('affiliate_commissions').select('order_id, commission_amount').in('order_id', orderIds)
       : Promise.resolve({ data: [] as { order_id: string; commission_amount: number }[] }),
-    supabaseAdmin.from('qr_codes').select('id, partner_id'),
   ])
 
   const ownerDriverIds = new Set((drivers ?? []).filter((d) => d.is_owner).map((d) => d.id))
   const commissionByOrder = new Map((commissions ?? []).map((c) => [c.order_id, c.commission_amount]))
-  const partnerByQr = new Map((qrCodes ?? []).map((q) => [q.id, q.partner_id]))
 
   let grossRevenue = 0
   let discountsGranted = 0
-  let partnerOwnerNet = 0
+  let poolableOwnerNet = 0
   const buyerIds = new Set<string>()
 
   for (const order of deliveredOrders) {
@@ -397,19 +396,20 @@ async function computeWindow(windowStart: Date, bonusPoolRate: number): Promise<
     discountsGranted += order.discount
     buyerIds.add(order.user_id)
 
-    const isPartnerAttributed = order.qr_code_id ? Boolean(partnerByQr.get(order.qr_code_id)) : false
-    if (isPartnerAttributed) {
+    // The pool is funded on every non-owner-driver delivery — same rule as
+    // markDelivered — so accumulate owner net on exactly those orders.
+    if (order.driver_id && !ownerDriverIds.has(order.driver_id)) {
       const payout = calculatePayout({
         subtotal: order.subtotal,
         deliveryFee: order.delivery_fee,
         discount: order.discount,
         total: order.total,
         costOfGoods: costMap.get(order.id) ?? 0,
-        driverIsOwner: order.driver_id ? ownerDriverIds.has(order.driver_id) : false,
+        driverIsOwner: false,
         partnerCommissionRate: 0,
         affiliateCommissionOverride: commissionByOrder.get(order.id) ?? 0,
       })
-      partnerOwnerNet += payout.ownerNet
+      poolableOwnerNet += payout.ownerNet
     }
   }
 
@@ -417,11 +417,11 @@ async function computeWindow(windowStart: Date, bonusPoolRate: number): Promise<
   // Both sides are credited, so cash committed = reward × 2 per approved pair.
   const referralCredits = (approvedReferrals ?? []).reduce((s, r) => s + r.reward_amount * 2, 0)
   const driverBonuses = (windowBonuses ?? []).reduce((s, b) => s + b.bonus_amount, 0)
-  const bonusPoolContributions = Math.max(0, partnerOwnerNet) * bonusPoolRate
+  const bonusPoolContributions = Math.max(0, poolableOwnerNet) * bonusPoolRate
 
   return {
     grossRevenue: round2(grossRevenue),
-    partnerOwnerNet: round2(partnerOwnerNet),
+    poolableOwnerNet: round2(poolableOwnerNet),
     discountsGranted: round2(discountsGranted),
     referralCredits: round2(referralCredits),
     referralPairs,

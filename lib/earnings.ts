@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabase'
-import { calculatePayout } from '@/lib/calculations'
+import { calculatePayout, calculateBonusPoolContribution } from '@/lib/calculations'
+import { getSettings } from '@/lib/settings'
 import { getBrisbaneDateString } from '@/lib/store-hours'
 import type { Order, OrderItem } from '@/types/index'
 
@@ -9,7 +10,16 @@ export interface EarningsSummary {
   grossProfit: number
   driverPayouts: number
   affiliateCommissions: number
+  /** grossProfit × 0.62 − commissions — the owner's share BEFORE the driver bonus pool is funded. */
   ownerNet: number
+  /**
+   * Slice of ownerNet set aside into driver bonus pools on non-owner-driver
+   * deliveries (ownerNet × bonusPoolRate). Estimated at the CURRENT pool rate,
+   * so a historical period reflects today's rate, not whatever was live then.
+   */
+  bonusPoolContributions: number
+  /** ownerNet − bonusPoolContributions — what the owner actually keeps after funding the pool. */
+  ownerTakeHome: number
 }
 
 const EMPTY_SUMMARY: EarningsSummary = {
@@ -19,6 +29,8 @@ const EMPTY_SUMMARY: EarningsSummary = {
   driverPayouts: 0,
   affiliateCommissions: 0,
   ownerNet: 0,
+  bonusPoolContributions: 0,
+  ownerTakeHome: 0,
 }
 
 /** Computes the full financial summary for all delivered orders in [start, now). start=null means all-time. */
@@ -53,6 +65,8 @@ export async function computeEarnings(start: Date | null): Promise<EarningsSumma
   const ownerDriverIds = new Set((drivers ?? []).filter((d) => d.is_owner).map((d) => d.id))
   const commissionByOrder = new Map((commissions ?? []).map((c) => [c.order_id, c.commission_amount]))
 
+  const { bonusPoolRate } = await getSettings()
+
   const summary: EarningsSummary = { ...EMPTY_SUMMARY, orderCount: orders.length }
 
   for (const order of orders as Order[]) {
@@ -76,7 +90,16 @@ export async function computeEarnings(start: Date | null): Promise<EarningsSumma
     summary.driverPayouts += payout.driverPayout
     summary.affiliateCommissions += payout.affiliateCommission
     summary.ownerNet += payout.ownerNet
+
+    // The pool is funded on every non-owner-driver delivery (see markDelivered
+    // in lib/orders.ts) — mirror that exactly so the finance view reconciles
+    // with what actually lands in driver pool balances.
+    if (order.driver_id && !driverIsOwner) {
+      summary.bonusPoolContributions += calculateBonusPoolContribution(payout.ownerNet, bonusPoolRate)
+    }
   }
+
+  summary.ownerTakeHome = summary.ownerNet - summary.bonusPoolContributions
 
   return round(summary)
 }
@@ -118,5 +141,7 @@ function round(summary: EarningsSummary): EarningsSummary {
     driverPayouts: r(summary.driverPayouts),
     affiliateCommissions: r(summary.affiliateCommissions),
     ownerNet: r(summary.ownerNet),
+    bonusPoolContributions: r(summary.bonusPoolContributions),
+    ownerTakeHome: r(summary.ownerTakeHome),
   }
 }

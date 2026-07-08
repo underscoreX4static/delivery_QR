@@ -178,7 +178,7 @@ export function SettingsBoard() {
       </div>
 
       <div className="rounded-xl border border-neutral-200 bg-white p-4">
-        <h2 className="mb-3 text-sm font-semibold">Commercial bonus pool</h2>
+        <h2 className="mb-3 text-sm font-semibold">Driver bonus pool</h2>
         <Field label="Share of your net profit set aside (%)">
           <input
             type="number"
@@ -189,8 +189,12 @@ export function SettingsBoard() {
           />
         </Field>
         <p className="mt-2 text-xs text-neutral-600">
-          On every partner-attributed delivered order, this share of your net profit is set aside into that
-          commercial&apos;s bonus pool, funding their milestone bonuses.
+          On every delivered order handled by a non-owner driver, this share of your net profit is set aside into that
+          driver&apos;s bonus pool, funding their milestone bonuses. It comes out of your take-home — see the split on{' '}
+          <a href="/admin/finance" className="underline">
+            /admin/finance
+          </a>
+          .
         </p>
       </div>
 
