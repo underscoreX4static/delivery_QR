@@ -337,6 +337,38 @@ export async function confirmSettlementReceived(settlementId: string): Promise<R
   return { ok: true, settlement: settlement as Settlement }
 }
 
+/**
+ * Deletes a settlement that hasn't been paid yet — for cleaning up ones
+ * created by mistake (e.g. a failed Telegram notify that still inserted the
+ * row). Only 'proposed' and 'confirmed' are removable: once 'paid', grants
+ * were marked paid_out and cash moved, so deleting would strand them.
+ *
+ * The FKs do the reversal cleanly: settlement_orders rows cascade-delete
+ * (freeing those orders for a new settlement) and driver_bonus_grants.settlement_id
+ * resets to null (making the bonuses re-settleable). Grants keep paid_out=false.
+ */
+export async function deleteSettlement(settlementId: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { data: settlement } = await supabaseAdmin
+    .from('settlements')
+    .select('status')
+    .eq('id', settlementId)
+    .single()
+
+  if (!settlement) return { ok: false, error: 'Settlement not found' }
+  if (settlement.status !== 'proposed' && settlement.status !== 'confirmed') {
+    return { ok: false, error: 'Only unpaid settlements (proposed or confirmed) can be cancelled' }
+  }
+
+  const { error } = await supabaseAdmin
+    .from('settlements')
+    .delete()
+    .eq('id', settlementId)
+    .in('status', ['proposed', 'confirmed'])
+
+  if (error) return { ok: false, error: error.message }
+  return { ok: true }
+}
+
 export function parsePartnerIdFromNotes(notes: string | null): string | null {
   return notes?.match(/^partner:([0-9a-f-]{36})$/i)?.[1] ?? null
 }

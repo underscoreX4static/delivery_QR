@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin-auth'
-import { markSettlementPaid } from '@/lib/settlements'
+import { deleteSettlement, markSettlementPaid } from '@/lib/settlements'
 
 export async function PATCH(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   const admin = await requireAdmin()
@@ -17,4 +17,15 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 409 })
 
   return NextResponse.json({ settlement: result.settlement })
+}
+
+export async function DELETE(_request: NextRequest, context: { params: Promise<{ id: string }> }) {
+  const admin = await requireAdmin()
+  if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { id } = await context.params
+  const result = await deleteSettlement(id)
+  if (!result.ok) return NextResponse.json({ error: result.error }, { status: 409 })
+
+  return NextResponse.json({ ok: true })
 }

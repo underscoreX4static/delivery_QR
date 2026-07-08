@@ -88,6 +88,26 @@ export function SettlementsBoard() {
     }
   }
 
+  const cancelSettlement = async (id: string) => {
+    if (!confirm('Cancel this settlement? Its deliveries and bonuses become available to settle again. Only do this for one created by mistake.')) {
+      return
+    }
+    setBusy(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/admin/settlements/${id}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const data = await res.json().catch(() => null)
+        throw new Error(data?.error ?? 'Failed to cancel settlement')
+      }
+      load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to cancel settlement')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <div className="grid gap-4 sm:grid-cols-2">
@@ -155,15 +175,26 @@ export function SettlementsBoard() {
             <div className="mt-2 text-xs text-neutral-600">
               Total: ${s.total_cash.toFixed(2)} · Payout: ${s.payout_amount.toFixed(2)}
             </div>
-            {s.status === 'confirmed' && (
-              <button
-                onClick={() => markPaid(s.id)}
-                disabled={busy}
-                className="mt-2 rounded-lg bg-black px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
-              >
-                Mark paid
-              </button>
-            )}
+            <div className="mt-2 flex flex-wrap gap-2">
+              {s.status === 'confirmed' && (
+                <button
+                  onClick={() => markPaid(s.id)}
+                  disabled={busy}
+                  className="rounded-lg bg-black px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+                >
+                  Mark paid
+                </button>
+              )}
+              {(s.status === 'proposed' || s.status === 'confirmed') && (
+                <button
+                  onClick={() => cancelSettlement(s.id)}
+                  disabled={busy}
+                  className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
           </div>
         ))}
         {settlements.length === 0 && <p className="text-sm text-neutral-600">No settlements yet.</p>}
