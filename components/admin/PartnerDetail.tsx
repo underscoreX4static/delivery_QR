@@ -52,6 +52,8 @@ export function PartnerDetail({ partnerId }: { partnerId: string }) {
   const [firstSaleBonus, setFirstSaleBonus] = useState<FirstSaleBonus | null>(null)
   const [bonusAmountInput, setBonusAmountInput] = useState('')
   const [triggerOrdersInput, setTriggerOrdersInput] = useState('1')
+  const [commissionInput, setCommissionInput] = useState('')
+  const [savingCommission, setSavingCommission] = useState(false)
   const [markingPaid, setMarkingPaid] = useState(false)
 
   const load = () => {
@@ -65,10 +67,27 @@ export function PartnerDetail({ partnerId }: { partnerId: string }) {
         setFirstSaleBonus(d.first_sale_bonus ?? null)
         setBonusAmountInput(String(d.first_sale_bonus?.amount ?? 10))
         setTriggerOrdersInput(String(d.first_sale_bonus?.trigger_orders ?? 1))
+        setCommissionInput(String(Math.round((d.stats?.commission_rate ?? 0) * 1000) / 10))
       })
   }
 
   useEffect(load, [partnerId])
+
+  const saveCommission = async () => {
+    const percent = Number(commissionInput)
+    if (!Number.isFinite(percent) || percent < 0 || percent > 100) return
+    setSavingCommission(true)
+    try {
+      await fetch(`/api/admin/partners/${partnerId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ commission_rate: percent / 100 }),
+      })
+      load()
+    } finally {
+      setSavingCommission(false)
+    }
+  }
 
   const saveBonusAmount = async () => {
     await fetch(`/api/admin/partners/${partnerId}`, {
@@ -126,7 +145,20 @@ export function PartnerDetail({ partnerId }: { partnerId: string }) {
         <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
           <div>
             <p className="text-xs text-neutral-600">Commission rate</p>
-            <p className="font-semibold">{(stats.commission_rate * 100).toFixed(1)}%</p>
+            <div className="flex items-center gap-1">
+              <input
+                type="number"
+                step="0.1"
+                min={0}
+                max={100}
+                value={commissionInput}
+                onChange={(e) => setCommissionInput(e.target.value)}
+                onBlur={saveCommission}
+                disabled={savingCommission}
+                className="w-16 rounded border border-neutral-300 px-2 py-1 font-semibold disabled:opacity-50"
+              />
+              <span className="font-semibold">%</span>
+            </div>
           </div>
           <div>
             <p className="text-xs text-neutral-600">Total earned</p>
