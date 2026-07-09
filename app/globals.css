@@ -51,6 +51,36 @@
   --info: #46545b; /* cold steel */
 }
 
+/*
+ * Admin-only dark theme. Scoped to any subtree carrying [data-theme="dark"]
+ * (the admin shell wrapper sets it) — deliberately NOT prefers-color-scheme,
+ * so the light-pinned Telegram Mini App is never affected. Redefines the same
+ * tokens; components stay unchanged.
+ */
+[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #1a1714;
+  --page-bg: #1a1714;
+  --surface: #221e18;
+  --raised: #2a261e;
+  --border: #3a342b;
+  --iron: #131110;
+  --iron-2: #1c1915;
+  --iron-line: #2c281f;
+  --iron-ink: #ece5d7;
+  --iron-soft: #8b8071;
+  --foreground: #ece5d7;
+  --muted: #a99e8a;
+  --primary: #d0674a;
+  --primary-foreground: #1a1714;
+  --brass: #c6a05a;
+  --brass-soft: #dcc088;
+  --success: #8ca17e;
+  --warning: #c79a46;
+  --danger: #d6685a;
+  --info: #8aa0a6;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-page-bg: var(--page-bg);

@@ -1,5 +1,6 @@
 import { getAdminSession } from '@/lib/supabase-server'
 import { AdminNav } from '@/components/admin/AdminNav'
+import { AdminShell } from '@/components/admin/AdminShell'
 import { MobileNav } from '@/components/admin/MobileNav'
 import { SignOutButton } from '@/components/admin/SignOutButton'
 
@@ -11,7 +12,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (!user) return <>{children}</>
 
   return (
-    <div className="flex min-h-dvh flex-col sm:flex-row">
+    <AdminShell>
       <MobileNav userEmail={user.email ?? ''} />
 
       <aside className="hidden w-60 shrink-0 flex-col justify-between border-r border-iron-line bg-iron p-4 sm:flex">
@@ -29,6 +30,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       </aside>
 
       <main className="flex-1 overflow-y-auto bg-page-bg px-4 py-6 sm:px-8 sm:py-8">{children}</main>
-    </div>
+    </AdminShell>
   )
 }
