@@ -1,10 +1,11 @@
 import { InventoryBoard } from '@/components/admin/InventoryBoard'
+import { PageHeader } from '@/components/admin/ui'
 
-export default function AdminInventoryPage() {
+export default function AdminPage() {
   return (
-    <div>
-      <h1 className="mb-4 text-xl font-semibold">Inventory</h1>
+    <>
+      <PageHeader eyebrow="Operations" title="Inventory" subtitle="Stock health, restock urgency, and what to double down on or cut." />
       <InventoryBoard />
-    </div>
+    </>
   )
 }

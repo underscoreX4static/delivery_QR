@@ -219,7 +219,7 @@ export function DriversBoard() {
 
       {showNewForm && (
         <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
-          <h2 className="mb-3 text-sm font-semibold text-foreground">New driver</h2>
+          <h2 className="mb-3 font-serif text-base font-semibold text-foreground">New driver</h2>
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             <input
               placeholder="Telegram ID"

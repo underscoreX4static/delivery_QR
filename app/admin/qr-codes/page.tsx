@@ -1,10 +1,11 @@
 import { QrCodesBoard } from '@/components/admin/QrCodesBoard'
+import { PageHeader } from '@/components/admin/ui'
 
-export default function AdminQrCodesPage() {
+export default function AdminPage() {
   return (
-    <div>
-      <h1 className="mb-4 text-xl font-semibold">QR Codes</h1>
+    <>
+      <PageHeader eyebrow="Growth" title="QR Codes" subtitle="Generate partner attribution codes and track their conversion." />
       <QrCodesBoard />
-    </div>
+    </>
   )
 }

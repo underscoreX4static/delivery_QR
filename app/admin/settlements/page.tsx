@@ -1,10 +1,11 @@
 import { SettlementsBoard } from '@/components/admin/SettlementsBoard'
+import { PageHeader } from '@/components/admin/ui'
 
-export default function AdminSettlementsPage() {
+export default function AdminPage() {
   return (
-    <div>
-      <h1 className="mb-4 text-xl font-semibold">Settlements</h1>
+    <>
+      <PageHeader eyebrow="Money" title="Settlements" subtitle="Pay drivers and commercials, confirmed over Telegram." />
       <SettlementsBoard />
-    </div>
+    </>
   )
 }

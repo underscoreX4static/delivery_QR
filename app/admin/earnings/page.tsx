@@ -1,10 +1,11 @@
 import { EarningsBoard } from '@/components/admin/EarningsBoard'
+import { PageHeader } from '@/components/admin/ui'
 
-export default function AdminEarningsPage() {
+export default function AdminPage() {
   return (
-    <div>
-      <h1 className="mb-4 text-xl font-semibold">Earnings</h1>
+    <>
+      <PageHeader eyebrow="Money" title="Earnings" subtitle="Revenue, profit, and what actually lands in your pocket." />
       <EarningsBoard />
-    </div>
+    </>
   )
 }

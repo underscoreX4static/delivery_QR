@@ -1,10 +1,11 @@
 import { ReferralsBoard } from '@/components/admin/ReferralsBoard'
+import { PageHeader } from '@/components/admin/ui'
 
-export default function AdminReferralsPage() {
+export default function AdminPage() {
   return (
-    <div>
-      <h1 className="mb-4 text-xl font-semibold">Referrals</h1>
+    <>
+      <PageHeader eyebrow="Growth" title="Referrals" subtitle="Review and approve customer referrals before crediting both sides." />
       <ReferralsBoard />
-    </div>
+    </>
   )
 }

@@ -3,7 +3,11 @@
 import { useRouter } from 'next/navigation'
 import { createBrowserSupabaseClient } from '@/lib/supabase-browser'
 
-export function SignOutButton() {
+export function SignOutButton({
+  className = 'text-sm text-muted transition-colors hover:text-foreground',
+}: {
+  className?: string
+}) {
   const router = useRouter()
 
   const handleSignOut = async () => {
@@ -14,7 +18,7 @@ export function SignOutButton() {
   }
 
   return (
-    <button onClick={handleSignOut} className="text-sm text-muted transition-colors hover:text-foreground">
+    <button onClick={handleSignOut} className={className}>
       Sign out
     </button>
   )

@@ -8,57 +8,77 @@
  * Pinned to light so rendering is consistent regardless of viewer theme.
  */
 :root {
-  --background: #f6f1ea;
-  --foreground: #2a2118;
   color-scheme: light;
 
-  /* --- Design tokens: "Maison de parfum × cheminée" ------------------------
-   * Warm, raw palette — burnt terracotta accent, amber/honey and oxblood for
-   * status, warm linen surfaces instead of cold white/gray. Each becomes a
-   * real Tailwind utility via @theme inline below — e.g. `bg-primary`,
-   * `text-primary`, `border-primary`, and `bg-primary/10` (10% opacity).
+  /* --- "Foundry & Apothecary" palette -------------------------------------
+   * A deliberate break from the generic warm-cream + terracotta look. Neutrals
+   * are limewash/ash (warm grey, not yellow cream); a cast-iron dark is used
+   * for the nav rail; aged brass is the metallic secondary; a deep rusted
+   * ember is the accent, used sparingly. Semantic status colors are kept
+   * distinct from the brand accent. Each becomes a Tailwind utility via
+   * @theme inline below — e.g. bg-surface, text-muted, bg-primary, bg-iron,
+   * text-brass, and opacity variants like bg-primary/10.
    */
 
   /* Surfaces */
-  --page-bg: #f6f1ea; /* warm linen — app background behind cards */
-  --surface: #fffcf7; /* warm paper white — card/panel background */
-  --border: #e5d8c8; /* warm sand — default border color */
+  --background: #e7e0d5; /* app background — warm limewash / ash */
+  --page-bg: #e7e0d5;
+  --surface: #f4f0e8; /* card / panel */
+  --raised: #fcfaf4; /* lifted surface (insets that should read higher) */
+  --border: #d6cdbe; /* warm stone hairline */
+
+  /* Cast iron — the dark nav rail + dark hero surfaces */
+  --iron: #201d19;
+  --iron-2: #2b2721;
+  --iron-line: #3a352d;
+  --iron-ink: #e7e0d5; /* text on iron */
+  --iron-soft: #9a8f7c; /* muted text on iron */
 
   /* Text */
-  --muted: #6e5e4c; /* warm taupe, darkened for AA contrast — secondary/label text */
+  --foreground: #241f19; /* charred near-black */
+  --muted: #6a6051; /* warm ash-brown — AA on all light surfaces */
 
   /* Brand */
-  --primary: #b54a2c; /* burnt terracotta/ember — primary buttons, links, active nav */
-  --primary-foreground: #fbf3ea; /* warm cream text on primary */
+  --primary: #a83d26; /* rusted ember — used sparingly */
+  --primary-foreground: #f8f0e6;
+  --brass: #7d5f22; /* aged brass, darkened for AA as small-label text on light surfaces */
+  --brass-soft: #b79a5e; /* lighter brass — only used on the dark iron rail, where it needs to stay light */
 
-  /* Semantic status (badges, alerts, stat highlighting) — darkened from the
-   * original picks, which read fine as swatches but failed WCAG AA (as low as
-   * 2.5:1) as actual text/badge content against light warm surfaces. */
-  --success: #566142; /* moss/olive, darkened — paid, confirmed, active */
-  --warning: #8a5a1e; /* honey amber, darkened — pending, awaiting action */
-  --danger: #8f3529; /* oxblood/brick — cancel, overdue, negative balance */
-  --info: #465451; /* warm slate, darkened — neutral informational badge */
+  /* Semantic status (separate from the brand accent) */
+  --success: #4e6552; /* verdigris */
+  --warning: #8a5e17; /* deep amber */
+  --danger: #8e2018; /* oxblood */
+  --info: #46545b; /* cold steel */
 }
 
 @theme inline {
   --color-background: var(--background);
-  --color-foreground: var(--foreground);
   --color-page-bg: var(--page-bg);
   --color-surface: var(--surface);
+  --color-raised: var(--raised);
   --color-border: var(--border);
+  --color-iron: var(--iron);
+  --color-iron-2: var(--iron-2);
+  --color-iron-line: var(--iron-line);
+  --color-iron-ink: var(--iron-ink);
+  --color-iron-soft: var(--iron-soft);
+  --color-foreground: var(--foreground);
   --color-muted: var(--muted);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-brass: var(--brass);
+  --color-brass-soft: var(--brass-soft);
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-danger: var(--danger);
   --color-info: var(--info);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-serif: var(--font-fraunces), "Iowan Old Style", Georgia, ui-serif, serif;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
 }

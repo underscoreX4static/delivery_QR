@@ -36,7 +36,10 @@ export default function AdminLoginPage() {
         className="flex w-full max-w-sm flex-col gap-4 rounded-xl border border-border bg-surface p-6 shadow-sm"
       >
         <div>
-          <h1 className="text-lg font-semibold text-foreground">HAZE Admin</h1>
+          <div className="mb-1 flex items-baseline gap-2">
+            <span className="font-serif text-2xl font-semibold tracking-wide text-foreground">HAZE</span>
+            <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-brass">livraison</span>
+          </div>
           <p className="text-sm text-muted">Sign in to manage the store.</p>
         </div>
         <label className="flex flex-col gap-1 text-sm font-medium text-foreground">

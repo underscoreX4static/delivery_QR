@@ -1,10 +1,11 @@
 import { SettingsBoard } from '@/components/admin/SettingsBoard'
+import { PageHeader } from '@/components/admin/ui'
 
-export default function AdminSettingsPage() {
+export default function AdminPage() {
   return (
-    <div>
-      <h1 className="mb-4 text-xl font-semibold">Settings</h1>
+    <>
+      <PageHeader eyebrow="Config" title="Settings" subtitle="Store hours, pricing, the driver pool, referrals, and treasury." />
       <SettingsBoard />
-    </div>
+    </>
   )
 }

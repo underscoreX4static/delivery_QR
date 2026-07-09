@@ -1,10 +1,11 @@
 import { CustomersBoard } from '@/components/admin/CustomersBoard'
+import { PageHeader } from '@/components/admin/ui'
 
-export default function AdminCustomersPage() {
+export default function AdminPage() {
   return (
-    <div>
-      <h1 className="mb-4 text-xl font-semibold">Customers</h1>
+    <>
+      <PageHeader eyebrow="Growth" title="Customers" subtitle="Who orders, what they spend, and where they came from." />
       <CustomersBoard />
-    </div>
+    </>
   )
 }

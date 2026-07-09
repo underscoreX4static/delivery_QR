@@ -1,10 +1,11 @@
 import { ProductsBoard } from '@/components/admin/ProductsBoard'
+import { PageHeader } from '@/components/admin/ui'
 
-export default function AdminProductsPage() {
+export default function AdminPage() {
   return (
-    <div>
-      <h1 className="mb-4 text-xl font-semibold">Products</h1>
+    <>
+      <PageHeader eyebrow="Operations" title="Products" subtitle="Catalogue, per-product batches, and CSV bulk import." />
       <ProductsBoard />
-    </div>
+    </>
   )
 }

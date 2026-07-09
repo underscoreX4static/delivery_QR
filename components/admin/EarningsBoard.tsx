@@ -69,19 +69,19 @@ export function EarningsBoard() {
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
             <p className="text-[10px] font-medium uppercase tracking-wide text-muted">Owner net (avant pool)</p>
-            <p className="mt-0.5 text-3xl font-bold tracking-tight text-foreground">${summary.ownerNet.toFixed(2)}</p>
+            <p className="mt-0.5 font-serif text-3xl font-semibold tracking-tight text-foreground">${summary.ownerNet.toFixed(2)}</p>
             <p className="mt-1 text-xs text-warning">− ${summary.bonusPoolContributions.toFixed(2)} mis dans le pool livreurs</p>
           </div>
           <div className="rounded-xl border border-foreground bg-foreground p-4 text-background">
             <p className="text-[10px] font-medium uppercase tracking-wide text-background/60">Dans la poche</p>
-            <p className="mt-0.5 text-3xl font-bold tracking-tight">${summary.ownerTakeHome.toFixed(2)}</p>
+            <p className="mt-0.5 font-serif text-3xl font-semibold tracking-tight">${summary.ownerTakeHome.toFixed(2)}</p>
             <p className="mt-1 text-xs text-background/60">Ce qui te reste après avoir financé le pool</p>
           </div>
         </div>
       )}
 
       <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
-        <h2 className="mb-3 text-sm font-semibold text-foreground">Revenue — last 14 days</h2>
+        <h2 className="mb-3 font-serif text-base font-semibold text-foreground">Revenue — last 14 days</h2>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={series}>
@@ -102,7 +102,7 @@ function StatTile({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
       <p className="text-[10px] font-medium uppercase tracking-wide text-muted">{label}</p>
-      <p className="mt-0.5 text-2xl font-bold tracking-tight text-foreground">{value}</p>
+      <p className="mt-0.5 font-serif text-2xl font-semibold tracking-tight text-foreground">{value}</p>
     </div>
   )
 }

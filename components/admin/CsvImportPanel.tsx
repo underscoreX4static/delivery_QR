@@ -82,7 +82,7 @@ export function CsvImportPanel({ onImported }: { onImported: () => void }) {
 
   return (
     <div className="rounded-xl border border-border bg-surface p-4">
-      <h2 className="text-sm font-semibold">CSV bulk import</h2>
+      <h2 className="font-serif text-base font-semibold text-foreground">CSV bulk import</h2>
       <p className="mt-1 text-xs text-muted">
         Headers: {EXPECTED_HEADERS.join(', ')}
       </p>

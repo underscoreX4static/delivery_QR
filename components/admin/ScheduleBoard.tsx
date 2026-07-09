@@ -29,7 +29,7 @@ export function ScheduleBoard() {
       <p className="text-xs text-muted">{data.total} orders in the last 30 days</p>
 
       <div className="overflow-x-auto rounded-xl border border-border bg-surface p-4">
-        <h2 className="mb-3 text-sm font-semibold">Hourly heatmap</h2>
+        <h2 className="mb-3 font-serif text-base font-semibold text-foreground">Hourly heatmap</h2>
         <div className="inline-grid grid-cols-[auto_repeat(24,minmax(20px,1fr))] gap-0.5 text-[9px]">
           <div />
           {Array.from({ length: 24 }, (_, h) => (
@@ -57,7 +57,7 @@ export function ScheduleBoard() {
       </div>
 
       <div className="rounded-xl border border-border bg-surface p-4">
-        <h2 className="mb-3 text-sm font-semibold">Orders by day of week</h2>
+        <h2 className="mb-3 font-serif text-base font-semibold text-foreground">Orders by day of week</h2>
         <div className="h-56">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={weekdayChartData}>

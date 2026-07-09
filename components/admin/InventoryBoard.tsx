@@ -185,7 +185,7 @@ function StatTile({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
       <p className="text-[10px] font-medium uppercase tracking-wide text-muted">{label}</p>
-      <p className="mt-0.5 text-2xl font-bold tracking-tight text-foreground">{value}</p>
+      <p className="mt-0.5 font-serif text-2xl font-semibold tracking-tight text-foreground">{value}</p>
     </div>
   )
 }
@@ -193,7 +193,7 @@ function StatTile({ label, value }: { label: string; value: number }) {
 function StrategyColumn({ title, rows }: { title: string; rows: InventoryRow[] }) {
   return (
     <div className="rounded-xl border border-border bg-surface p-4">
-      <h3 className="mb-2 text-sm font-semibold">{title}</h3>
+      <h3 className="mb-2 font-serif text-sm font-semibold text-foreground">{title}</h3>
       <ul className="flex flex-col gap-1 text-xs">
         {rows.map((r) => (
           <li key={r.id}>{r.name}</li>

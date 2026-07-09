@@ -65,7 +65,7 @@ export function SettingsBoard() {
   return (
     <div className="flex flex-col gap-4">
       <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
-        <h2 className="mb-3 text-sm font-semibold text-foreground">Store hours (per day)</h2>
+        <h2 className="mb-3 font-serif text-base font-semibold text-foreground">Store hours (per day)</h2>
         <div className="flex flex-col gap-2">
           {DAY_LABELS.map((label, day) => (
             <div key={day} className="flex items-center gap-2 text-xs">
@@ -112,7 +112,7 @@ export function SettingsBoard() {
       </div>
 
       <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
-        <h2 className="mb-3 text-sm font-semibold text-foreground">Delivery & discounts</h2>
+        <h2 className="mb-3 font-serif text-base font-semibold text-foreground">Delivery & discounts</h2>
         <div className="flex flex-wrap gap-3">
           <Field label="Delivery fee ($)">
             <input type="number" step="0.01" value={settings.deliveryFee} onChange={(e) => update('deliveryFee', Number(e.target.value))} className="w-28 rounded border border-border bg-surface px-2 py-1 text-xs text-foreground focus:border-primary focus:outline-none" />
@@ -166,7 +166,7 @@ export function SettingsBoard() {
       </div>
 
       <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
-        <h2 className="mb-3 text-sm font-semibold text-foreground">Inventory intelligence</h2>
+        <h2 className="mb-3 font-serif text-base font-semibold text-foreground">Inventory intelligence</h2>
         <Field label="Reorder days default">
           <input
             type="number"
@@ -178,7 +178,7 @@ export function SettingsBoard() {
       </div>
 
       <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
-        <h2 className="mb-3 text-sm font-semibold text-foreground">Driver bonus pool</h2>
+        <h2 className="mb-3 font-serif text-base font-semibold text-foreground">Driver bonus pool</h2>
         <Field label="Share of your net profit set aside (%)">
           <input
             type="number"
@@ -200,7 +200,7 @@ export function SettingsBoard() {
       </div>
 
       <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
-        <h2 className="mb-3 text-sm font-semibold text-foreground">Customer referrals</h2>
+        <h2 className="mb-3 font-serif text-base font-semibold text-foreground">Customer referrals</h2>
         <Field label="Reward per referral ($, each side)">
           <input
             type="number"
@@ -220,7 +220,7 @@ export function SettingsBoard() {
       </div>
 
       <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
-        <h2 className="mb-3 text-sm font-semibold text-foreground">Treasury baseline</h2>
+        <h2 className="mb-3 font-serif text-base font-semibold text-foreground">Treasury baseline</h2>
         <Field label="Cash on hand ($)">
           <input
             type="number"

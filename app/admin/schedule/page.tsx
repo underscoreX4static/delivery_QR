@@ -1,10 +1,11 @@
 import { ScheduleBoard } from '@/components/admin/ScheduleBoard'
+import { PageHeader } from '@/components/admin/ui'
 
-export default function AdminSchedulePage() {
+export default function AdminPage() {
   return (
-    <div>
-      <h1 className="mb-4 text-xl font-semibold">Schedule</h1>
+    <>
+      <PageHeader eyebrow="Config" title="Schedule" subtitle="When orders really land — by hour and by weekday." />
       <ScheduleBoard />
-    </div>
+    </>
   )
 }

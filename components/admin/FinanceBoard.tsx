@@ -204,7 +204,7 @@ export function FinanceBoard() {
           >
             <div className="rounded-lg bg-foreground p-4 text-background">
               <p className="text-xs text-background/60">Dans la poche (owner net après pool)</p>
-              <p className="text-4xl font-bold tracking-tight">{money(snap.earnings.ownerTakeHome)}</p>
+              <p className="font-serif text-4xl font-semibold tracking-tight">{money(snap.earnings.ownerTakeHome)}</p>
               <div className="mt-2 flex flex-col gap-0.5 text-xs text-background/60">
                 <div className="flex justify-between">
                   <span>Bénéf owner (avant pool)</span>
@@ -408,7 +408,7 @@ function RunwayCard({
       <p className="text-[10px] font-medium uppercase tracking-wide text-muted">{title}</p>
       <p className="text-[11px] text-muted">{subtitle}</p>
       <p
-        className={`mt-2 text-4xl font-bold tracking-tight ${
+        className={`mt-2 font-serif text-4xl font-semibold tracking-tight ${
           danger ? 'text-danger' : warn ? 'text-warning' : 'text-foreground'
         }`}
       >
@@ -435,7 +435,7 @@ function Tile({ label, value, accent }: { label: string; value: string; accent?:
   return (
     <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
       <p className="text-[10px] font-medium uppercase tracking-wide text-muted">{label}</p>
-      <p className={`mt-0.5 text-2xl font-bold tracking-tight ${accent === 'burn' ? 'text-danger' : 'text-foreground'}`}>{value}</p>
+      <p className={`mt-0.5 font-serif text-2xl font-semibold tracking-tight ${accent === 'burn' ? 'text-danger' : 'text-foreground'}`}>{value}</p>
     </div>
   )
 }

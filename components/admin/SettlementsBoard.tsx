@@ -120,7 +120,7 @@ export function SettlementsBoard() {
     <div className="flex flex-col gap-4">
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
-          <h2 className="mb-3 text-sm font-semibold text-foreground">Driver settlement (today)</h2>
+          <h2 className="mb-3 font-serif text-base font-semibold text-foreground">Driver settlement (today)</h2>
           <div className="flex flex-wrap gap-2">
             <select value={driverId} onChange={(e) => setDriverId(e.target.value)} className="rounded border border-border bg-surface px-2 py-1 text-xs text-foreground focus:border-primary focus:outline-none">
               <option value="">Select driver…</option>
@@ -141,7 +141,7 @@ export function SettlementsBoard() {
         </div>
 
         <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
-          <h2 className="mb-3 text-sm font-semibold text-foreground">Commercial settlement (on-demand)</h2>
+          <h2 className="mb-3 font-serif text-base font-semibold text-foreground">Commercial settlement (on-demand)</h2>
           <div className="flex flex-wrap gap-2">
             <select value={partnerId} onChange={(e) => setPartnerId(e.target.value)} className="rounded border border-border bg-surface px-2 py-1 text-xs text-foreground focus:border-primary focus:outline-none">
               <option value="">Select commercial…</option>

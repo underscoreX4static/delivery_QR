@@ -130,7 +130,7 @@ export function PartnerDetail({ partnerId }: { partnerId: string }) {
         <Link href="/admin/partners" className="text-sm text-muted hover:text-foreground">
           ← Commercials
         </Link>
-        <h1 className="mt-1 text-xl font-semibold text-foreground">{partner.name}</h1>
+        <h1 className="mt-1 font-serif text-2xl font-semibold tracking-tight text-foreground">{partner.name}</h1>
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -141,7 +141,7 @@ export function PartnerDetail({ partnerId }: { partnerId: string }) {
       </div>
 
       <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
-        <h2 className="mb-3 text-sm font-semibold text-foreground">Financial summary</h2>
+        <h2 className="mb-3 font-serif text-base font-semibold text-foreground">Financial summary</h2>
         <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
           <div>
             <p className="text-xs text-muted">Commission rate</p>
@@ -177,7 +177,7 @@ export function PartnerDetail({ partnerId }: { partnerId: string }) {
 
       {firstSaleBonus && (
         <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
-          <h2 className="mb-3 text-sm font-semibold text-foreground">Welcome bonus</h2>
+          <h2 className="mb-3 font-serif text-base font-semibold text-foreground">Welcome bonus</h2>
           <div className="flex flex-wrap items-end gap-3">
             <label className="flex flex-col gap-1 text-[10px] font-medium uppercase text-muted">
               Bonus amount ($)
@@ -233,7 +233,7 @@ export function PartnerDetail({ partnerId }: { partnerId: string }) {
       )}
 
       <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
-        <h2 className="mb-3 text-sm font-semibold text-foreground">Orders</h2>
+        <h2 className="mb-3 font-serif text-base font-semibold text-foreground">Orders</h2>
         <div className="flex flex-col gap-2 text-xs">
           {orders.map((o) => (
             <div key={o.order_id} className="flex items-center justify-between border-b border-border pb-2">
@@ -258,7 +258,7 @@ export function PartnerDetail({ partnerId }: { partnerId: string }) {
       </div>
 
       <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
-        <h2 className="mb-3 text-sm font-semibold text-foreground">Customers brought</h2>
+        <h2 className="mb-3 font-serif text-base font-semibold text-foreground">Customers brought</h2>
         <div className="flex flex-col gap-2 text-xs">
           {customers.map((c) => (
             <div key={c.user_id} className="flex items-center justify-between border-b border-border pb-2">
@@ -283,7 +283,7 @@ function StatTile({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
       <p className="text-[10px] font-medium uppercase tracking-wide text-muted">{label}</p>
-      <p className="mt-0.5 text-2xl font-bold tracking-tight text-foreground">{value}</p>
+      <p className="mt-0.5 font-serif text-2xl font-semibold tracking-tight text-foreground">{value}</p>
     </div>
   )
 }

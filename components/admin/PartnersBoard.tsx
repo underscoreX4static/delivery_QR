@@ -220,7 +220,7 @@ function NewPartnerForm({ onCreated }: { onCreated: () => void }) {
 
   return (
     <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
-      <h2 className="mb-3 text-sm font-semibold text-foreground">New commercial</h2>
+      <h2 className="mb-3 font-serif text-base font-semibold text-foreground">New commercial</h2>
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
         <input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} className="rounded-lg border border-border bg-surface px-3 py-2 text-base focus:border-primary focus:outline-none sm:text-xs" />
         <input placeholder="Address" value={address} onChange={(e) => setAddress(e.target.value)} className="rounded-lg border border-border bg-surface px-3 py-2 text-base focus:border-primary focus:outline-none sm:text-xs" />

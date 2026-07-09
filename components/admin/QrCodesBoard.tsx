@@ -60,7 +60,7 @@ export function QrCodesBoard() {
   return (
     <div className="flex flex-col gap-4">
       <div className="rounded-xl border border-border bg-surface p-4">
-        <h2 className="mb-3 text-sm font-semibold">Generate QR code</h2>
+        <h2 className="mb-3 font-serif text-base font-semibold text-foreground">Generate QR code</h2>
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
           <select value={partnerId} onChange={(e) => setPartnerId(e.target.value)} className="rounded-lg border border-border bg-surface px-3 py-2 text-base text-foreground focus:border-primary focus:outline-none sm:text-xs">
             <option value="">Select commercial…</option>

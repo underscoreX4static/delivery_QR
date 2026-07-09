@@ -48,7 +48,7 @@ export function Leaderboard({
   return (
     <div className="rounded-xl border border-border bg-surface p-4">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-sm font-semibold">{title}</h2>
+        <h2 className="font-serif text-base font-semibold text-foreground">{title}</h2>
         <div className="flex gap-0.5 rounded-lg bg-border p-0.5 text-xs">
           <button
             onClick={() => setView('total')}

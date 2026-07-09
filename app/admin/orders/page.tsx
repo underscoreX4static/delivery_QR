@@ -1,10 +1,11 @@
 import { OrdersBoard } from '@/components/admin/OrdersBoard'
+import { PageHeader } from '@/components/admin/ui'
 
-export default function AdminOrdersPage() {
+export default function AdminPage() {
   return (
-    <div>
-      <h1 className="mb-4 text-xl font-semibold">Orders</h1>
+    <>
+      <PageHeader eyebrow="Operations" title="Orders" subtitle="The live pipeline — assign a driver, advance status, settle up." />
       <OrdersBoard />
-    </div>
+    </>
   )
 }

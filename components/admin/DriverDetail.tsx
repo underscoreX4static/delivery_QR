@@ -78,7 +78,7 @@ export function DriverDetail({ driverId }: { driverId: string }) {
         <Link href="/admin/drivers" className="text-sm text-muted hover:text-foreground">
           ← Drivers
         </Link>
-        <h1 className="mt-1 text-xl font-semibold text-foreground">
+        <h1 className="mt-1 font-serif text-2xl font-semibold tracking-tight text-foreground">
           {driver.first_name} {driver.last_name}
           {driver.is_owner && (
             <span className="ml-2 rounded-full bg-primary px-2 py-0.5 text-[10px] text-primary-foreground">Owner</span>
@@ -94,7 +94,7 @@ export function DriverDetail({ driverId }: { driverId: string }) {
       </div>
 
       <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
-        <h2 className="mb-3 text-sm font-semibold text-foreground">Bonuses</h2>
+        <h2 className="mb-3 font-serif text-base font-semibold text-foreground">Bonuses</h2>
 
         <>
           {driver.is_owner && (
@@ -176,7 +176,7 @@ export function DriverDetail({ driverId }: { driverId: string }) {
       </div>
 
       <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
-        <h2 className="mb-3 text-sm font-semibold text-foreground">Orders</h2>
+        <h2 className="mb-3 font-serif text-base font-semibold text-foreground">Orders</h2>
         <div className="flex flex-col gap-2 text-xs">
           {orders.map((o) => (
             <div key={o.order_id} className="flex items-center justify-between border-b border-border pb-2">
@@ -200,7 +200,7 @@ function StatTile({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
       <p className="text-[10px] font-medium uppercase tracking-wide text-muted">{label}</p>
-      <p className="mt-0.5 text-2xl font-bold tracking-tight text-foreground">{value}</p>
+      <p className="mt-0.5 font-serif text-2xl font-semibold tracking-tight text-foreground">{value}</p>
     </div>
   )
 }
