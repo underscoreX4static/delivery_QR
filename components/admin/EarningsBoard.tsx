@@ -68,14 +68,14 @@ export function EarningsBoard() {
       {summary && (
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
-            <p className="text-[10px] font-medium uppercase tracking-wide text-muted">Owner net (avant pool)</p>
+            <p className="text-[10px] font-medium uppercase tracking-wide text-muted">Owner net (before pool)</p>
             <p className="mt-0.5 font-serif text-3xl font-semibold tracking-tight text-foreground">${summary.ownerNet.toFixed(2)}</p>
-            <p className="mt-1 text-xs text-warning">− ${summary.bonusPoolContributions.toFixed(2)} mis dans le pool livreurs</p>
+            <p className="mt-1 text-xs text-warning">− ${summary.bonusPoolContributions.toFixed(2)} set aside in the driver pool</p>
           </div>
           <div className="rounded-xl border border-foreground bg-foreground p-4 text-background">
-            <p className="text-[10px] font-medium uppercase tracking-wide text-background/60">Dans la poche</p>
+            <p className="text-[10px] font-medium uppercase tracking-wide text-background/60">In your pocket</p>
             <p className="mt-0.5 font-serif text-3xl font-semibold tracking-tight">${summary.ownerTakeHome.toFixed(2)}</p>
-            <p className="mt-1 text-xs text-background/60">Ce qui te reste après avoir financé le pool</p>
+            <p className="mt-1 text-xs text-background/60">What&apos;s left after funding the pool</p>
           </div>
         </div>
       )}

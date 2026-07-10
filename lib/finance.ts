@@ -34,6 +34,8 @@ export interface FinanceRates {
   discountRate2: number
   /** Average commission_rate across active partners — a headline view of what commercials cost. */
   avgPartnerCommissionRate: number
+  /** Owner floor: fraction of the owner's gross share commissions can never clamp below. */
+  ownerFloor: number
 }
 
 export interface FinancePools {
@@ -273,6 +275,7 @@ export async function computeFinanceSnapshot(period: EarningsPeriod): Promise<Fi
     discountThreshold2: settings.discountThreshold2,
     discountRate2: settings.discountRate2,
     avgPartnerCommissionRate: round2(avgPartnerCommissionRate * 10000) / 10000,
+    ownerFloor: settings.ownerFloor,
   }
 
   return { period, earnings, rates, pools, treasury, growth, simBasis }

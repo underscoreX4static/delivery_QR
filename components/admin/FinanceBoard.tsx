@@ -30,6 +30,7 @@ interface Snapshot {
     discountThreshold2: number
     discountRate2: number
     avgPartnerCommissionRate: number
+    ownerFloor: number
   }
   pools: {
     driverPoolSetAside: number
@@ -117,15 +118,15 @@ export function FinanceBoard() {
       {/* HERO — the countdown: runway with and without the BFR */}
       <div className="grid gap-3 sm:grid-cols-2">
         <RunwayCard
-          title="Runway — sans BFR"
-          subtitle="Cash libre, stock traité comme du cash"
+          title="Runway — excl. inventory"
+          subtitle="Free cash, stock counted as cash"
           weeks={growth.runwayWeeksNoBFR}
           cash={treasury.availableCashNoBFR}
           tone="optimistic"
         />
         <RunwayCard
-          title="Runway — avec BFR"
-          subtitle="Cash libre, stock immobilisé retiré"
+          title="Runway — incl. inventory"
+          subtitle="Free cash, stock locked away removed"
           weeks={growth.runwayWeeksWithBFR}
           cash={treasury.availableCashWithBFR}
           tone="realistic"
@@ -146,38 +147,38 @@ export function FinanceBoard() {
       <div className="grid gap-4 lg:grid-cols-2">
         {/* LEFT — engaged money / pools */}
         <div className="flex flex-col gap-4">
-          <Card title="Trésorerie — cascade">
+          <Card title="Treasury — waterfall">
             <Waterfall
               rows={[
-                { label: 'Cash déclaré', value: treasury.startingCash },
-                { label: '+ COD chez les livreurs', value: treasury.codInTransit, sign: '+' },
-                { label: '= Trésorerie brute', value: treasury.grossCash, subtotal: true },
-                { label: '− Engagements à payer', value: -treasury.committedOutflows, sign: '−' },
-                { label: '= Dispo (sans BFR)', value: treasury.availableCashNoBFR, subtotal: true },
-                { label: '− Stock immobilisé', value: -treasury.stockValue, sign: '−' },
-                { label: '= Dispo réel (avec BFR)', value: treasury.availableCashWithBFR, subtotal: true, strong: true },
+                { label: 'Cash on hand (declared)', value: treasury.startingCash },
+                { label: '+ COD held by drivers', value: treasury.codInTransit, sign: '+' },
+                { label: '= Gross cash', value: treasury.grossCash, subtotal: true },
+                { label: '− Committed outflows', value: -treasury.committedOutflows, sign: '−' },
+                { label: '= Available (excl. inventory)', value: treasury.availableCashNoBFR, subtotal: true },
+                { label: '− Stock locked in inventory', value: -treasury.stockValue, sign: '−' },
+                { label: '= Really available (incl. inventory)', value: treasury.availableCashWithBFR, subtotal: true, strong: true },
               ]}
             />
             <p className="mt-3 text-xs text-muted">
-              Crédits parrainage en circulation : {money(treasury.referralCreditFloat)} — passif futur (remises à venir),
-              non retiré du cash.
+              Referral credit in circulation: {money(treasury.referralCreditFloat)} — a future liability (discounts to
+              come), not subtracted from cash.
             </p>
           </Card>
 
-          <Card title="Argent engagé (pools)">
+          <Card title="Committed money (pools)">
             <div className="flex flex-col divide-y divide-border/60">
-              <PoolRow label="Budget pool livreurs (dispo à donner)" value={pools.driverPoolSetAside} muted />
-              <PoolRow label="Dépense acquisition (30j)" value={pools.acquisitionSpendWindow} muted />
-              <PoolRow label="Bonus livreurs attribués, non payés" value={pools.driverBonusesOwed} />
-              <PoolRow label="Commissions commerciales dues" value={pools.commissionsOwed} />
-              <PoolRow label="Primes de bienvenue dues" value={pools.welcomeBonusesOwed} />
-              <PoolRow label="Crédits parrainage en circulation" value={pools.referralCreditFloat} muted />
-              <PoolRow label="COD à encaisser (part owner)" value={pools.codInTransit} muted />
-              <PoolRow label="Total engagé (hard)" value={pools.totalCommitted} strong />
+              <PoolRow label="Driver pool budget (available to grant)" value={pools.driverPoolSetAside} muted />
+              <PoolRow label="Acquisition spend (30d)" value={pools.acquisitionSpendWindow} muted />
+              <PoolRow label="Driver bonuses granted, unpaid" value={pools.driverBonusesOwed} />
+              <PoolRow label="Commercial commissions owed" value={pools.commissionsOwed} />
+              <PoolRow label="Welcome bonuses owed" value={pools.welcomeBonusesOwed} />
+              <PoolRow label="Referral credit in circulation" value={pools.referralCreditFloat} muted />
+              <PoolRow label="COD to collect (owner share)" value={pools.codInTransit} muted />
+              <PoolRow label="Total committed (hard)" value={pools.totalCommitted} strong />
             </div>
             <p className="mt-3 text-xs text-muted">
-              « Provisionné » et « en circulation » ne sont pas des sorties fermes — informatifs. Le total « hard » (primes
-              + commissions + bienvenue) est ce qui doit réellement sortir.
+              The driver pool budget and referral credit are set-aside / circulating figures, not firm outflows. The
+              &quot;hard&quot; total (driver bonuses + commissions + welcome bonuses) is what actually has to be paid out.
             </p>
           </Card>
         </div>
@@ -185,7 +186,7 @@ export function FinanceBoard() {
         {/* RIGHT — profitability & levers */}
         <div className="flex flex-col gap-4">
           <Card
-            title="Rentabilité"
+            title="Profitability"
             action={
               <div className="flex gap-1">
                 {TABS.map((t) => (
@@ -205,56 +206,61 @@ export function FinanceBoard() {
             }
           >
             <div className="rounded-lg bg-foreground p-4 text-background">
-              <p className="text-xs text-background/60">Dans la poche (owner net après pool)</p>
+              <p className="text-xs text-background/60">In your pocket (owner net after pool)</p>
               <p className="font-serif text-4xl font-semibold tracking-tight">{money(snap.earnings.ownerTakeHome)}</p>
               <div className="mt-2 flex flex-col gap-0.5 text-xs text-background/60">
                 <div className="flex justify-between">
-                  <span>Bénéf owner (avant pool)</span>
+                  <span>Owner net (before pool)</span>
                   <span className="text-background/80">{money(snap.earnings.ownerNet)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>− Mis dans le pool livreurs</span>
+                  <span>− Set aside in the driver pool</span>
                   <span className="text-warning">−{money(snap.earnings.bonusPoolContributions)}</span>
                 </div>
               </div>
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
               <MiniStat label="Gross revenue" value={money(snap.earnings.grossRevenue)} />
-              <MiniStat label="Gross profit" value={money(snap.earnings.grossProfit)} />
+              <MiniStat label="Margin" value={money(snap.earnings.grossProfit)} />
               <MiniStat label="Driver payouts" value={money(snap.earnings.driverPayouts)} />
               <MiniStat label="Commissions" value={money(snap.earnings.affiliateCommissions)} />
             </div>
           </Card>
 
-          <Card title={period === 'today' ? 'Répartition — clôture du jour' : 'Répartition de la période'}>
+          <Card title={period === 'today' ? 'Breakdown — daily close' : 'Period breakdown'}>
             <p className="mb-3 text-xs text-muted">
-              Où va chaque dollar de CA livré sur la période. Le pool est prélevé sur ta part avant ce qui te reste.
+              Where every dollar of delivered revenue goes. Commission is charged on the margin and comes out of your
+              share; the pool is taken from what&apos;s left before your take-home.
             </p>
             <Waterfall
               rows={[
-                { label: 'CA livré (encaissé)', value: snap.earnings.grossRevenue },
-                { label: '− Coût des produits', value: -(snap.earnings.grossRevenue - snap.earnings.grossProfit), sign: '−' },
-                { label: '= Profit brut', value: snap.earnings.grossProfit, subtotal: true },
-                { label: '− Part livreurs (38% + livraison)', value: -snap.earnings.driverPayouts, sign: '−' },
-                { label: '− Commissions commerciaux', value: -snap.earnings.affiliateCommissions, sign: '−' },
-                { label: '= Bénéf owner', value: snap.earnings.ownerNet, subtotal: true },
-                { label: '− À mettre dans le pool livreurs', value: -snap.earnings.bonusPoolContributions, sign: '−' },
-                { label: '= Dans ta poche', value: snap.earnings.ownerTakeHome, subtotal: true, strong: true },
+                { label: 'Delivered revenue (collected)', value: snap.earnings.grossRevenue },
+                {
+                  label: '− Product cost (COGS)',
+                  value: -(snap.earnings.grossRevenue - snap.earnings.driverPayouts - snap.earnings.affiliateCommissions - snap.earnings.ownerNet),
+                  sign: '−',
+                },
+                { label: '− Driver share (delivery + 38% of margin)', value: -snap.earnings.driverPayouts, sign: '−' },
+                { label: '− Commercial commission (on margin)', value: -snap.earnings.affiliateCommissions, sign: '−' },
+                { label: '= Owner net', value: snap.earnings.ownerNet, subtotal: true },
+                { label: '− To the driver pool', value: -snap.earnings.bonusPoolContributions, sign: '−' },
+                { label: '= In your pocket', value: snap.earnings.ownerTakeHome, subtotal: true, strong: true },
               ]}
             />
           </Card>
 
-          <Card title="Taux actifs">
+          <Card title="Active rates">
             <div className="flex flex-col divide-y divide-border/60 text-sm">
-              <RateRow label="Part livreur (du profit brut)" value={pct(rates.driverPayoutShare)} />
-              <RateRow label="Part owner (du profit brut)" value={pct(rates.ownerProfitShare)} />
-              <RateRow label="Cagnotte livreur (du net owner)" value={pct(rates.bonusPoolRate)} />
-              <RateRow label="Commission moyenne commerciaux" value={pct(rates.avgPartnerCommissionRate)} />
-              <RateRow label="Parrainage (par côté)" value={money(rates.referralRewardAmount)} />
-              <RateRow label="Livraison gratuite dès" value={money(rates.freeDeliveryThreshold)} />
+              <RateRow label="Driver share (of margin)" value={pct(rates.driverPayoutShare)} />
+              <RateRow label="Owner share (of margin)" value={pct(rates.ownerProfitShare)} />
+              <RateRow label="Owner floor (min kept)" value={pct(rates.ownerFloor)} />
+              <RateRow label="Driver pool (of owner net)" value={pct(rates.bonusPoolRate)} />
+              <RateRow label="Avg commercial commission (on margin)" value={pct(rates.avgPartnerCommissionRate)} />
+              <RateRow label="Referral (per side)" value={money(rates.referralRewardAmount)} />
+              <RateRow label="Free delivery from" value={money(rates.freeDeliveryThreshold)} />
               <RateRow
-                label="Remise paliers"
-                value={`${pct(rates.discountRate)} dès ${money(rates.discountThreshold)} · ${pct(rates.discountRate2)} dès ${money(rates.discountThreshold2)}`}
+                label="Discount tiers"
+                value={`${pct(rates.discountRate)} from ${money(rates.discountThreshold)} · ${pct(rates.discountRate2)} from ${money(rates.discountThreshold2)}`}
               />
             </div>
           </Card>
@@ -291,19 +297,19 @@ function Simulator({ snap }: { snap: Snapshot }) {
     bonusPoolRate !== rates.bonusPoolRate || referralReward !== rates.referralRewardAmount || promoRate !== 0
 
   return (
-    <Card title="Simulateur — jusqu'où je pousse ?">
+    <Card title="Simulator — how far can I push?">
       <p className="mb-4 text-xs text-muted">
-        Bouge les curseurs pour voir l&apos;impact sur le burn et le runway. Simulation pure — rien n&apos;est modifié.
-        Quand ça te convient, applique-le toi-même dans{' '}
+        Drag the sliders to see the impact on burn and runway. Pure simulation — nothing is changed. When you&apos;re
+        happy with it, apply it yourself in{' '}
         <a href="/admin/settings" className="text-primary underline">
-          les réglages
+          settings
         </a>
         .
       </p>
 
       <div className="grid gap-4 sm:grid-cols-3">
         <Slider
-          label="Cagnotte livreur"
+          label="Driver pool"
           value={bonusPoolRate}
           min={0}
           max={0.5}
@@ -313,7 +319,7 @@ function Simulator({ snap }: { snap: Snapshot }) {
           onChange={setBonusPoolRate}
         />
         <Slider
-          label="Parrainage / côté"
+          label="Referral / side"
           value={referralReward}
           min={0}
           max={100}
@@ -323,7 +329,7 @@ function Simulator({ snap }: { snap: Snapshot }) {
           onChange={setReferralReward}
         />
         <Slider
-          label="Promo sur le CA (nouveau)"
+          label="Promo on revenue (new)"
           value={promoRate}
           min={0}
           max={0.3}
@@ -336,13 +342,13 @@ function Simulator({ snap }: { snap: Snapshot }) {
 
       <div className="mt-5 grid grid-cols-3 gap-3">
         <SimResult
-          label="Burn / week projeté"
+          label="Projected burn / week"
           value={money(projected.weeklyBurn)}
-          hint={touched ? `${burnDelta >= 0 ? '+' : ''}${money(burnDelta)} vs actuel` : 'inchangé'}
+          hint={touched ? `${burnDelta >= 0 ? '+' : ''}${money(burnDelta)} vs current` : 'unchanged'}
           tone={burnDelta > 0.01 ? 'burn' : undefined}
         />
-        <SimResult label="Runway sans BFR" value={runwayLabel(projected.runwayNoBFR)} tone="optimistic" />
-        <SimResult label="Runway avec BFR" value={runwayLabel(projected.runwayWithBFR)} tone="realistic" />
+        <SimResult label="Runway excl. inventory" value={runwayLabel(projected.runwayNoBFR)} tone="optimistic" />
+        <SimResult label="Runway incl. inventory" value={runwayLabel(projected.runwayWithBFR)} tone="realistic" />
       </div>
     </Card>
   )
@@ -416,7 +422,7 @@ function RunwayCard({
       >
         {runwayLabel(weeks)}
       </p>
-      <p className="mt-1 text-xs text-muted">{money(cash)} de cash libre</p>
+      <p className="mt-1 text-xs text-muted">{money(cash)} free cash</p>
     </div>
   )
 }
