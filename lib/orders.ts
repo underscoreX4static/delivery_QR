@@ -3,6 +3,7 @@ import { commitConsumption, refundConsumption } from '@/lib/inventory'
 import { calculateBonusPoolContribution, calculatePayout } from '@/lib/calculations'
 import { getSettings } from '@/lib/settings'
 import { contributeToPool } from '@/lib/driver-pool'
+import { settleReferralsForUser } from '@/lib/referrals'
 import { notifyOwner, sendMessage } from '@/lib/telegram'
 import type { Order, OrderItem, OrderStatus } from '@/types/index'
 
@@ -200,6 +201,15 @@ export async function markDelivered(orderId: string, changedBy: string): Promise
     await notifyOwner(
       `⚠️ Order #${orderId.slice(0, 8)} delivered but its payout/commission/pool side effects failed — check manually.`
     ).catch(() => {})
+  }
+
+  // Referral credit unlocks on delivery (Phase 3): this delivery may be the
+  // referred customer's first, or the referrer's Nth. Independent of the payout
+  // side effects above, so it gets its own guard.
+  try {
+    await settleReferralsForUser(order.user_id)
+  } catch (err) {
+    console.error(`Referral settlement failed for order ${orderId}:`, err)
   }
 
   return { ok: true }

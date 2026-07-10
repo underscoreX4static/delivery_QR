@@ -8,7 +8,7 @@ export interface StoreSettings extends PricingSettings {
   reorderDaysDefault: number
   /** Share of the owner's net profit per partner-attributed order that funds that partner's bonus pool. */
   bonusPoolRate: number
-  /** Credit given to BOTH the referrer and the referred customer once a referral is admin-approved. */
+  /** Credit given to BOTH the referrer and the referred customer for a referral. */
   referralRewardAmount: number
   /**
    * Owner-declared liquid cash on hand, entered manually — the app can't see

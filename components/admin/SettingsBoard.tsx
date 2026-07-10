@@ -242,11 +242,12 @@ export function SettingsBoard() {
           />
         </Field>
         <p className="mt-2 text-xs text-muted">
-          Credited to both the referrer and the new customer once you approve a pending referral in{' '}
+          When you approve a referral in{' '}
           <a href="/admin/referrals" className="text-primary underline">
             /admin/referrals
           </a>
-          .
+          , the new customer gets their credit right away (usable on their first order). The referrer is credited once
+          that new customer&apos;s first order is actually delivered.
         </p>
       </div>
 

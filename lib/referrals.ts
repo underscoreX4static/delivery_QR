@@ -2,6 +2,7 @@ import { nanoid } from 'nanoid'
 import { supabaseAdmin } from '@/lib/supabase'
 import { sendMessage } from '@/lib/telegram'
 import { getSettings } from '@/lib/settings'
+import { isReferrerCreditable } from '@/lib/referral-rules'
 import type { Referral } from '@/types/index'
 
 const BALANCE_UPDATE_RETRY_ATTEMPTS = 5
@@ -132,7 +133,15 @@ export async function getPendingReferrals(): Promise<ReferralWithContext[]> {
   })) as unknown as ReferralWithContext[]
 }
 
-/** Approves a pending referral — credits both accounts and notifies them. Idempotent via the status guard. */
+/**
+ * Admin approves a pending referral. This credits the REFERRED customer right
+ * away (so the reward is usable on their first order — the acquisition hook)
+ * but NOT the referrer, who is only credited once that customer's first order
+ * is actually delivered (see creditReferrerIfDelivered, called from
+ * markDelivered). If the referred customer was already delivered before the
+ * admin got to the review, the referrer is credited immediately too.
+ * Idempotent via the status guard + the per-side credited_at guards.
+ */
 export async function approveReferral(
   referralId: string,
   approvedBy: string
@@ -147,21 +156,99 @@ export async function approveReferral(
 
   if (error || !referral) return { ok: false, error: 'Referral not found, or already reviewed' }
 
-  await Promise.all([
-    adjustCreditBalance(referral.referrer_id, referral.reward_amount),
-    adjustCreditBalance(referral.referred_id, referral.reward_amount),
-  ])
-
-  const [{ data: referrer }, { data: referred }] = await Promise.all([
-    supabaseAdmin.from('users').select('telegram_id').eq('id', referral.referrer_id).single(),
-    supabaseAdmin.from('users').select('telegram_id').eq('id', referral.referred_id).single(),
-  ])
-
-  const msg = `🎉 Your referral was approved — you've got *$${referral.reward_amount.toFixed(2)} credit* toward your next order!`
-  if (referrer?.telegram_id) await sendMessage(referrer.telegram_id, msg, { parse_mode: 'Markdown' }).catch(() => {})
-  if (referred?.telegram_id) await sendMessage(referred.telegram_id, msg, { parse_mode: 'Markdown' }).catch(() => {})
+  await creditReferredNow(referral as Referral).catch((err) =>
+    console.error(`Referred credit on approval failed for referral ${referralId}:`, err)
+  )
+  // In case the new customer was already delivered before approval.
+  await creditReferrerIfDelivered(referral as Referral).catch((err) =>
+    console.error(`Referrer credit attempt on approval failed for referral ${referralId}:`, err)
+  )
 
   return { ok: true }
+}
+
+/** Credits the referred customer (usable on their first order). Idempotent via referred_credited_at. */
+async function creditReferredNow(referral: Referral): Promise<void> {
+  if (referral.status !== 'approved' || referral.referred_credited_at) return
+
+  const { data: claimed } = await supabaseAdmin
+    .from('referrals')
+    .update({ referred_credited_at: new Date().toISOString() })
+    .eq('id', referral.id)
+    .is('referred_credited_at', null)
+    .eq('status', 'approved')
+    .select('id')
+    .single()
+  if (!claimed) return
+
+  await adjustCreditBalance(referral.referred_id, referral.reward_amount)
+
+  const { data: referred } = await supabaseAdmin.from('users').select('telegram_id').eq('id', referral.referred_id).single()
+  if (referred?.telegram_id) {
+    await sendMessage(
+      referred.telegram_id,
+      `🎉 Welcome! You've got *$${referral.reward_amount.toFixed(2)} credit* — it'll come off your first order.`,
+      { parse_mode: 'Markdown' }
+    ).catch(() => {})
+  }
+}
+
+/**
+ * Credits the referrer once the referred customer's first order is delivered.
+ * Claimed atomically (conditional update on referrer_credited_at) so concurrent
+ * deliveries can never double-pay. Returns whether it credited.
+ */
+export async function creditReferrerIfDelivered(referral: Referral): Promise<boolean> {
+  if (referral.status !== 'approved' || referral.referrer_credited_at) return false
+
+  const { count: referredDelivered } = await supabaseAdmin
+    .from('orders')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', referral.referred_id)
+    .eq('status', 'delivered')
+
+  if (!isReferrerCreditable({ status: referral.status, referrerCreditedAt: referral.referrer_credited_at, referredDeliveredCount: referredDelivered ?? 0 })) {
+    return false
+  }
+
+  const { data: claimed } = await supabaseAdmin
+    .from('referrals')
+    .update({ referrer_credited_at: new Date().toISOString() })
+    .eq('id', referral.id)
+    .is('referrer_credited_at', null)
+    .eq('status', 'approved')
+    .select('id')
+    .single()
+  if (!claimed) return false
+
+  await adjustCreditBalance(referral.referrer_id, referral.reward_amount)
+
+  const { data: referrer } = await supabaseAdmin.from('users').select('telegram_id').eq('id', referral.referrer_id).single()
+  if (referrer?.telegram_id) {
+    await sendMessage(
+      referrer.telegram_id,
+      `🎉 Your referral paid off — you've got *$${referral.reward_amount.toFixed(2)} credit* toward your next order!`,
+      { parse_mode: 'Markdown' }
+    ).catch(() => {})
+  }
+  return true
+}
+
+/**
+ * After a delivery, credit the referrer of any referral where THIS customer is
+ * the referred and their order was just delivered. Called from markDelivered.
+ */
+export async function settleReferralsForUser(userId: string): Promise<void> {
+  const { data: referrals } = await supabaseAdmin
+    .from('referrals')
+    .select('*')
+    .eq('status', 'approved')
+    .is('referrer_credited_at', null)
+    .eq('referred_id', userId)
+
+  for (const r of (referrals as Referral[]) ?? []) {
+    await creditReferrerIfDelivered(r).catch((err) => console.error(`Referrer credit failed for referral ${r.id}:`, err))
+  }
 }
 
 /** Rejects a pending referral — no credit, no customer-facing notification. Idempotent via the status guard. */

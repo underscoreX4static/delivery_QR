@@ -92,6 +92,17 @@ export interface Referral {
   created_at: string
   reviewed_at: string | null
   reviewed_by: string | null
+  /**
+   * When the REFERRED customer (filleul) was credited — at admin approval, so
+   * the credit is usable on their first order.
+   * Requires migration 010_referral_unlock_on_delivery.sql.
+   */
+  referred_credited_at?: string | null
+  /**
+   * When the REFERRER (parrain) was credited — once the referred customer's
+   * first order is actually delivered.
+   */
+  referrer_credited_at?: string | null
 }
 
 export interface Category {
