@@ -121,12 +121,16 @@ export async function markDelivered(orderId: string, changedBy: string): Promise
       ? Boolean((await supabaseAdmin.from('drivers').select('is_owner').eq('id', order.driver_id).single()).data?.is_owner)
       : false
 
-    // Resolve the attributed partner (still via this order's QR in Phase 1;
-    // Phase 2 switches to the customer's first_qr_source).
+    // Attribution is FIRST-TOUCH EXCLUSIVE (Phase 2): the commission goes to the
+    // partner behind the CUSTOMER's first-ever QR (users.first_qr_source), not
+    // this order's QR. A customer with no first_qr_source is organic → no
+    // commission. A customer already attributed can never be re-attributed to
+    // another partner, regardless of which QR opened this order.
     let partnerId: string | null = null
     let partner: { commission_rate: number; first_sale_bonus_amount: number; welcome_bonus_trigger_orders: number } | null = null
-    if (order.qr_code_id) {
-      const { data: qrCode } = await supabaseAdmin.from('qr_codes').select('partner_id').eq('id', order.qr_code_id).single()
+    const { data: customer } = await supabaseAdmin.from('users').select('first_qr_source').eq('id', order.user_id).single()
+    if (customer?.first_qr_source) {
+      const { data: qrCode } = await supabaseAdmin.from('qr_codes').select('partner_id').eq('id', customer.first_qr_source).single()
       if (qrCode?.partner_id) {
         const { data: p } = await supabaseAdmin
           .from('partners')

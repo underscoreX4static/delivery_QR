@@ -6,6 +6,7 @@ import { escapeMarkdown, sendMessage, sendOrderButton, sendPhoto } from '@/lib/t
 import { handleCallbackQuery, handleReplyMessage } from '@/lib/telegram-callbacks'
 import { DRIVER_BONUS_MILESTONES } from '@/lib/calculations'
 import { createPendingReferral, getOrCreateReferralCode } from '@/lib/referrals'
+import { resolveFirstTouch } from '@/lib/attribution'
 import { getSettings } from '@/lib/settings'
 
 // Telegram redelivers an update if the webhook doesn't respond quickly
@@ -129,7 +130,7 @@ async function handleStart(message: Message, payload: string) {
 
   const { data: existingUser } = await supabaseAdmin
     .from('users')
-    .select('id')
+    .select('id, first_qr_source')
     .eq('telegram_id', telegramId)
     .maybeSingle()
 
@@ -138,6 +139,14 @@ async function handleStart(message: Message, payload: string) {
 
   if (existingUser) {
     userId = existingUser.id
+    // First-touch lock: attribute an as-yet-unattributed customer to the first
+    // QR they scan (even if they originally started organically). Once set,
+    // first_qr_source is never overwritten, so a later different QR can't
+    // reassign them.
+    const nextSource = resolveFirstTouch(existingUser.first_qr_source ?? null, qrCodeId)
+    if (nextSource && nextSource !== existingUser.first_qr_source) {
+      await supabaseAdmin.from('users').update({ first_qr_source: nextSource }).eq('id', userId)
+    }
   } else {
     const { data: newUser, error } = await supabaseAdmin
       .from('users')
