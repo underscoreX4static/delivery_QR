@@ -4,8 +4,21 @@ import type { PayoutBreakdown } from '@/types/index'
 // payout, profit, pricing, or discount calculations. Every other file must
 // call into these functions rather than re-deriving the math.
 
-export const DRIVER_PAYOUT_SHARE = 0.38
-export const OWNER_PROFIT_SHARE = 0.62
+// Default split of the product MARGIN (not revenue). Configurable via settings
+// (settings.driver_share); owner share is always derived as 1 − driver share
+// (decision D3), so the two can never fail to sum to 1.
+export const DRIVER_SHARE = 0.38
+export const OWNER_SHARE = 0.62 // = 1 − DRIVER_SHARE; kept for callers/readers that display the headline rate
+
+// Back-compat aliases (some read-model displays still import these names).
+export const DRIVER_PAYOUT_SHARE = DRIVER_SHARE
+export const OWNER_PROFIT_SHARE = OWNER_SHARE
+
+// The owner keeps AT LEAST this fraction of their gross share — acquisition
+// commissions can never clamp the owner below it. Configurable via settings
+// (settings.owner_floor) but never below this hard floor (decision: 11%).
+export const OWNER_FLOOR = 0.11
+export const OWNER_FLOOR_HARD_MIN = 0.11
 
 export interface PricingSettings {
   deliveryFee: number
@@ -57,52 +70,78 @@ export function calculateOrderPricing(subtotal: number, settings: PricingSetting
 }
 
 export interface PayoutInput {
+  /** Sum of line sell prices before the tier discount, EXCLUDING delivery. */
   subtotal: number
-  deliveryFee: number
+  /** Tier discount applied to the order (an owner-borne acquisition cost — decision D2). */
   discount: number
-  total: number
-  /** sum of unit_cost_price × quantity across all order_items */
+  /** Delivery fee charged to the customer (0 above the free-delivery threshold). Pass-through to the driver, outside the margin. */
+  deliveryFee: number
+  /** Referral credit actually applied on this order — also owner-borne (D2). Defaults to 0. */
+  creditApplied?: number
+  /** Sum of unit_cost_price × quantity across all order_items. */
   costOfGoods: number
   driverIsOwner: boolean
-  /** partner.commission_rate snapshot; 0 if the order has no attributed partner */
+  /** partner.commission_rate; 0 if the order has no attributed partner. Commission is now charged on MARGIN, not revenue. */
   partnerCommissionRate: number
   /**
-   * Use this exact figure instead of total × partnerCommissionRate. For a
-   * delivered order, the real commission owed is whatever was frozen into
-   * affiliate_commissions at delivery time — a partner's rate can change
-   * afterward, and recomputing from the current rate would make historical
-   * earnings figures silently drift even though nothing was actually repaid
-   * differently. Pass the snapshot amount here whenever one already exists
-   * (i.e. everywhere except the moment the order is first delivered).
+   * Use this exact commission figure instead of margin × partnerCommissionRate.
+   * For a delivered order the real commission owed is whatever was frozen into
+   * affiliate_commissions at delivery time — a rate can change afterward, and
+   * recomputing would make historical figures drift. Pass the snapshot whenever
+   * one exists (everywhere except the moment of first delivery).
    */
   affiliateCommissionOverride?: number
+  /** Driver's share of margin. Defaults to DRIVER_SHARE; owner share is 1 − this. */
+  driverShare?: number
+  /** Owner floor fraction. Defaults to OWNER_FLOOR; always clamped to at least OWNER_FLOOR_HARD_MIN. */
+  ownerFloor?: number
 }
 
 /**
  * Computes the full financial breakdown for a single delivered order.
+ *
+ * Cascade (see REFACTOR_PLAN / DECISIONS):
+ *   margin          = subtotal − COGS                 (delivery excluded; promo NOT in margin — D2 owner-borne)
+ *   driverPayout    = isOwner ? 0 : margin×driverShare + deliveryFee
+ *   ownerShareGross = margin×ownerShare (+ the driver share + delivery if the owner delivered it himself)
+ *   commission      = margin × rate,  capped so the owner keeps ≥ ownerFloor of ownerShareGross
+ *   ownerNet        = ownerShareGross − commission − discount − credit   (owner bears promo + referral credit)
+ *
+ * This makes total cash reconcile exactly:
+ *   driverPayout + ownerNet + commission + COGS + discount + credit = order.total
  */
 export function calculatePayout(input: PayoutInput): PayoutBreakdown {
-  const revenue = input.total
-  const cost = input.costOfGoods
-  const grossProfit = round2(revenue - cost)
+  const driverShare = input.driverShare ?? DRIVER_SHARE
+  const ownerShare = 1 - driverShare
+  const ownerFloor = Math.max(input.ownerFloor ?? OWNER_FLOOR, OWNER_FLOOR_HARD_MIN)
+  const discount = input.discount
+  const credit = input.creditApplied ?? 0
 
-  const driverPayout = input.driverIsOwner
-    ? 0
-    : round2(input.deliveryFee + grossProfit * DRIVER_PAYOUT_SHARE)
+  const margin = round2(input.subtotal - input.costOfGoods)
 
-  const affiliateCommission =
+  const driverPayout = input.driverIsOwner ? 0 : round2(margin * driverShare + input.deliveryFee)
+
+  // When the owner delivers, they also keep the driver's slice + the delivery fee.
+  const ownerShareGross = round2(
+    margin * ownerShare + (input.driverIsOwner ? margin * driverShare + input.deliveryFee : 0)
+  )
+
+  const uncappedCommission =
     input.affiliateCommissionOverride !== undefined
       ? round2(input.affiliateCommissionOverride)
-      : round2(input.total * input.partnerCommissionRate)
+      : round2(margin * input.partnerCommissionRate)
 
-  const ownerNet = round2(grossProfit * OWNER_PROFIT_SHARE - affiliateCommission)
+  const maxCommission = round2(ownerShareGross * (1 - ownerFloor))
+  const affiliateCommission = round2(Math.min(uncappedCommission, maxCommission))
+
+  const ownerNet = round2(ownerShareGross - affiliateCommission - discount - credit)
 
   return {
-    revenue,
-    cost: round2(cost),
-    grossProfit,
+    margin,
     driverPayout,
+    ownerShareGross,
     affiliateCommission,
+    affiliateCommissionUncapped: uncappedCommission,
     ownerNet,
   }
 }

@@ -3,8 +3,9 @@ import { requireAdmin } from '@/lib/admin-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { clearDriverCommands, setDriverCommands } from '@/lib/telegram'
 import { getDriverGrants, getPoolBalance } from '@/lib/driver-pool'
-import { calculatePayout } from '@/lib/calculations'
-import type { OrderItem } from '@/types/index'
+import { resolvePayout } from '@/lib/earnings'
+import { getSettings } from '@/lib/settings'
+import type { Order, OrderItem } from '@/types/index'
 
 const ACTIVE_ORDER_STATUSES = ['pending', 'confirmed', 'preparing', 'on_the_way']
 
@@ -44,22 +45,15 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ id
     itemsByOrder.set(item.order_id, list)
   }
 
+  const settings = await getSettings()
   let revenueGenerated = 0
   let totalPayoutEarned = 0
   for (const order of deliveredOrders) {
-    const orderItems = itemsByOrder.get(order.id) ?? []
-    const costOfGoods = orderItems.reduce((sum, i) => sum + i.unit_cost_price * i.quantity, 0)
-    const payout = calculatePayout({
-      subtotal: order.subtotal,
-      deliveryFee: order.delivery_fee,
-      discount: order.discount,
-      total: order.total,
-      costOfGoods,
-      driverIsOwner: driver.is_owner,
-      partnerCommissionRate: 0,
-    })
+    const costOfGoods = (itemsByOrder.get(order.id) ?? []).reduce((sum, i) => sum + i.unit_cost_price * i.quantity, 0)
+    // Prefer the driver-payout snapshot frozen at delivery (decision D5).
+    const { driverPayout } = resolvePayout(order as Order, costOfGoods, driver.is_owner, 0, settings)
     revenueGenerated += order.total
-    totalPayoutEarned += payout.driverPayout
+    totalPayoutEarned += driverPayout
   }
 
   const ordersTable = (orders ?? []).slice(0, 50).map((o) => ({

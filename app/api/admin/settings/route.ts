@@ -26,6 +26,8 @@ const FIELD_TO_KEY: Record<string, string> = {
   bonusPoolRate: 'bonus_pool_rate',
   referralRewardAmount: 'referral_reward_amount',
   startingCash: 'starting_cash',
+  driverShare: 'driver_share',
+  ownerFloor: 'owner_floor',
 }
 
 export async function PATCH(request: NextRequest) {

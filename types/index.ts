@@ -188,6 +188,15 @@ export interface Order {
   scheduled_at: string | null
   created_at: string
   updated_at: string
+  /**
+   * Payout snapshot, frozen at delivery (decision D5). Null until delivered (or
+   * until the migration 009 backfill runs for pre-existing delivered orders).
+   * Read-models prefer these over recomputing so driver pay is deterministic.
+   * Requires migration 009_commission_on_margin.sql.
+   */
+  margin?: number | null
+  driver_payout?: number | null
+  owner_net?: number | null
 }
 
 export interface OrderItem {
@@ -244,6 +253,13 @@ export interface AffiliateCommission {
   partner_id: string
   order_id: string
   order_total: number
+  /**
+   * The base the commission was charged on. Since the margin refactor this is
+   * the order MARGIN (subtotal − COGS); older rows (base = order.total, i.e. CA)
+   * have this null. Lets the two eras be told apart without rewriting history.
+   * Requires migration 009_commission_on_margin.sql.
+   */
+  commission_base?: number | null
   commission_rate: number
   commission_amount: number
   paid_out: boolean
@@ -298,10 +314,15 @@ export interface CartPreview {
 }
 
 export interface PayoutBreakdown {
-  revenue: number
-  cost: number
-  grossProfit: number
+  /** subtotal − COGS (delivery excluded; promo not deducted here). */
+  margin: number
   driverPayout: number
+  /** margin × ownerShare (+ driver slice + delivery if owner delivered). Before commission/promo/credit. */
+  ownerShareGross: number
+  /** Commission actually charged, after the owner-floor cap. */
   affiliateCommission: number
+  /** Commission before the floor cap — for surfacing when the cap bit. */
+  affiliateCommissionUncapped: number
+  /** ownerShareGross − commission − discount − credit. */
   ownerNet: number
 }

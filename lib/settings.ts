@@ -1,5 +1,5 @@
 import { supabaseAdmin } from '@/lib/supabase'
-import type { PricingSettings } from '@/lib/calculations'
+import { DRIVER_SHARE, OWNER_FLOOR, OWNER_FLOOR_HARD_MIN, type PricingSettings } from '@/lib/calculations'
 
 // Store hours / manual open-closed override live in lib/slots.ts's
 // getSlotSettings() (per-weekday hours + force-open/closed) — this file
@@ -17,6 +17,10 @@ export interface StoreSettings extends PricingSettings {
    * owner re-enters it whenever it drifts from reality.
    */
   startingCash: number
+  /** Driver's share of margin (owner share = 1 − this — decision D3). */
+  driverShare: number
+  /** Owner floor: fraction of the owner's gross share commissions can never clamp below. Clamped to OWNER_FLOOR_HARD_MIN. */
+  ownerFloor: number
 }
 
 const DEFAULTS: StoreSettings = {
@@ -30,6 +34,8 @@ const DEFAULTS: StoreSettings = {
   bonusPoolRate: 0.1,
   referralRewardAmount: 20,
   startingCash: 0,
+  driverShare: DRIVER_SHARE,
+  ownerFloor: OWNER_FLOOR,
 }
 
 export async function getSettings(): Promise<StoreSettings> {
@@ -49,6 +55,9 @@ export async function getSettings(): Promise<StoreSettings> {
     bonusPoolRate: Number(map.bonus_pool_rate ?? DEFAULTS.bonusPoolRate),
     referralRewardAmount: Number(map.referral_reward_amount ?? DEFAULTS.referralRewardAmount),
     startingCash: Number(map.starting_cash ?? DEFAULTS.startingCash),
+    driverShare: Number(map.driver_share ?? DEFAULTS.driverShare),
+    // Never let a stored value drop below the hard floor.
+    ownerFloor: Math.max(Number(map.owner_floor ?? DEFAULTS.ownerFloor), OWNER_FLOOR_HARD_MIN),
   }
 }
 

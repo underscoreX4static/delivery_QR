@@ -107,88 +107,95 @@ export async function markDelivered(orderId: string, changedBy: string): Promise
 
   await recordStatusChange(orderId, 'delivered', changedBy)
 
-  let commissionAmount = 0
+  // Compute the full payout ONCE (single source of truth — lib/calculations.ts),
+  // then apply every side effect from it: freeze the payout snapshot on the
+  // order (decision D5), record the partner commission (now charged on MARGIN,
+  // stored with commission_base), and fund the driver bonus pool. Wrapped so a
+  // side-effect failure surfaces to the owner instead of 500-ing a delivery
+  // whose status is already committed.
+  try {
+    const [items, settings] = await Promise.all([getOrderItems(orderId), getSettings()])
+    const costOfGoods = items.reduce((sum, i) => sum + i.unit_cost_price * i.quantity, 0)
 
-  if (order.qr_code_id) {
-    const { data: qrCode } = await supabaseAdmin
-      .from('qr_codes')
-      .select('partner_id')
-      .eq('id', order.qr_code_id)
-      .single()
+    const driverIsOwner = order.driver_id
+      ? Boolean((await supabaseAdmin.from('drivers').select('is_owner').eq('id', order.driver_id).single()).data?.is_owner)
+      : false
 
-    if (qrCode?.partner_id) {
-      const { data: partner } = await supabaseAdmin
-        .from('partners')
-        .select('commission_rate, first_sale_bonus_amount, welcome_bonus_trigger_orders')
-        .eq('id', qrCode.partner_id)
-        .single()
-
-      if (partner) {
-        commissionAmount = round2(order.total * partner.commission_rate)
-
-        // Checked before inserting this order's own commission row, so this
-        // count is "how many they had before this delivery" — comparing
-        // against triggerOrders - 1 tells us if *this* delivery is exactly
-        // the Nth one that unlocks the welcome bonus (not necessarily #1).
-        const { count: priorCommissions } = await supabaseAdmin
-          .from('affiliate_commissions')
-          .select('id', { count: 'exact', head: true })
-          .eq('partner_id', qrCode.partner_id)
-
-        await supabaseAdmin.from('affiliate_commissions').insert({
-          partner_id: qrCode.partner_id,
-          order_id: order.id,
-          order_total: order.total,
-          commission_rate: partner.commission_rate,
-          commission_amount: commissionAmount,
-        })
-
-        const triggerOrders = partner.welcome_bonus_trigger_orders ?? 1
-        if ((priorCommissions ?? 0) === triggerOrders - 1) {
-          await notifyFirstSaleBonus(qrCode.partner_id, partner.first_sale_bonus_amount ?? 10, triggerOrders).catch((err) => {
-            console.error(`Welcome bonus notification failed for order ${orderId}:`, err)
-          })
+    // Resolve the attributed partner (still via this order's QR in Phase 1;
+    // Phase 2 switches to the customer's first_qr_source).
+    let partnerId: string | null = null
+    let partner: { commission_rate: number; first_sale_bonus_amount: number; welcome_bonus_trigger_orders: number } | null = null
+    if (order.qr_code_id) {
+      const { data: qrCode } = await supabaseAdmin.from('qr_codes').select('partner_id').eq('id', order.qr_code_id).single()
+      if (qrCode?.partner_id) {
+        const { data: p } = await supabaseAdmin
+          .from('partners')
+          .select('commission_rate, first_sale_bonus_amount, welcome_bonus_trigger_orders')
+          .eq('id', qrCode.partner_id)
+          .single()
+        if (p) {
+          partnerId = qrCode.partner_id
+          partner = p
         }
       }
     }
-  }
 
-  // Fund the GLOBAL driver bonus pool — a share of owner net is set aside on
-  // every non-owner-driver delivery. The owner later grants discretionary
-  // bonuses from this budget (see lib/driver-pool.ts). Nothing is tied to a
-  // specific driver here; the driver's own cut is the delivery-fee + 38%
-  // payout, untouched.
-  if (order.driver_id) {
-    try {
-      const [items, settings, driver] = await Promise.all([
-        getOrderItems(orderId),
-        getSettings(),
-        supabaseAdmin.from('drivers').select('is_owner').eq('id', order.driver_id).single(),
-      ])
+    // Referral credit applied on this order = the gap between the priced total
+    // and subtotal+delivery−discount. Owner-borne (decision D2).
+    const creditApplied = round2(order.subtotal + order.delivery_fee - order.discount - order.total)
 
-      if (!driver.data?.is_owner) {
-        const costOfGoods = items.reduce((sum, i) => sum + i.unit_cost_price * i.quantity, 0)
+    const payout = calculatePayout({
+      subtotal: order.subtotal,
+      discount: order.discount,
+      deliveryFee: order.delivery_fee,
+      creditApplied,
+      costOfGoods,
+      driverIsOwner,
+      partnerCommissionRate: partner?.commission_rate ?? 0,
+      driverShare: settings.driverShare,
+      ownerFloor: settings.ownerFloor,
+    })
 
-        const payout = calculatePayout({
-          subtotal: order.subtotal,
-          deliveryFee: order.delivery_fee,
-          discount: order.discount,
-          total: order.total,
-          costOfGoods,
-          driverIsOwner: false,
-          partnerCommissionRate: 0,
-          affiliateCommissionOverride: commissionAmount,
+    // Freeze the payout snapshot on the order.
+    await supabaseAdmin
+      .from('orders')
+      .update({ margin: payout.margin, driver_payout: payout.driverPayout, owner_net: payout.ownerNet })
+      .eq('id', order.id)
+
+    // Partner commission — charged on the margin, stored with its base.
+    if (partnerId && partner) {
+      const { count: priorCommissions } = await supabaseAdmin
+        .from('affiliate_commissions')
+        .select('id', { count: 'exact', head: true })
+        .eq('partner_id', partnerId)
+
+      await supabaseAdmin.from('affiliate_commissions').insert({
+        partner_id: partnerId,
+        order_id: order.id,
+        order_total: order.total,
+        commission_base: payout.margin,
+        commission_rate: partner.commission_rate,
+        commission_amount: payout.affiliateCommission,
+      })
+
+      const triggerOrders = partner.welcome_bonus_trigger_orders ?? 1
+      if ((priorCommissions ?? 0) === triggerOrders - 1) {
+        await notifyFirstSaleBonus(partnerId, partner.first_sale_bonus_amount ?? 10, triggerOrders).catch((err) => {
+          console.error(`Welcome bonus notification failed for order ${orderId}:`, err)
         })
-
-        const contribution = calculateBonusPoolContribution(payout.ownerNet, settings.bonusPoolRate)
-        await contributeToPool(contribution)
       }
-    } catch (err) {
-      console.error(`Driver pool contribution failed for order ${orderId}:`, err)
-      await notifyOwner(
-        `⚠️ Order #${orderId.slice(0, 8)} delivered but its driver pool contribution failed — check manually.`
-      ).catch(() => {})
     }
+
+    // Fund the global driver bonus pool from owner net (non-owner deliveries only).
+    if (order.driver_id && !driverIsOwner) {
+      const contribution = calculateBonusPoolContribution(payout.ownerNet, settings.bonusPoolRate)
+      await contributeToPool(contribution)
+    }
+  } catch (err) {
+    console.error(`Delivery side effects failed for order ${orderId}:`, err)
+    await notifyOwner(
+      `⚠️ Order #${orderId.slice(0, 8)} delivered but its payout/commission/pool side effects failed — check manually.`
+    ).catch(() => {})
   }
 
   return { ok: true }

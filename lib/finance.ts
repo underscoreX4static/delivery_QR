@@ -1,12 +1,7 @@
 import { supabaseAdmin } from '@/lib/supabase'
-import {
-  calculatePayout,
-  DRIVER_PAYOUT_SHARE,
-  OWNER_PROFIT_SHARE,
-} from '@/lib/calculations'
-import { computeEarnings, type EarningsSummary } from '@/lib/earnings'
+import { computeEarnings, resolvePayout, type EarningsSummary } from '@/lib/earnings'
 import { getPoolBalance, getTotalUnpaidGrants } from '@/lib/driver-pool'
-import { getSettings } from '@/lib/settings'
+import { getSettings, type StoreSettings } from '@/lib/settings'
 import { getBrisbanePeriodStart, type EarningsPeriod } from '@/lib/store-hours'
 import type { Order, OrderItem } from '@/types/index'
 
@@ -197,7 +192,7 @@ export async function computeFinanceSnapshot(period: EarningsPeriod): Promise<Fi
 
   // COD in transit: delivered orders not covered by a driver settlement that
   // reached payment_received. Owner's share = total − driver payout.
-  const codInTransit = await computeCodInTransit()
+  const codInTransit = await computeCodInTransit(settings)
 
   const totalCommitted = round2(driverBonusesOwed + commissionsOwed + welcomeBonusesOwed)
 
@@ -228,7 +223,7 @@ export async function computeFinanceSnapshot(period: EarningsPeriod): Promise<Fi
   }
 
   // Trailing-window burn + acquisition.
-  const window = await computeWindow(windowStart, settings.bonusPoolRate)
+  const window = await computeWindow(windowStart, settings)
 
   // Burn = growth margin given up. The pool contribution is the driver-bonus
   // spend (grants just disburse what's already set aside, so counting them too
@@ -261,8 +256,8 @@ export async function computeFinanceSnapshot(period: EarningsPeriod): Promise<Fi
   }
 
   const rates: FinanceRates = {
-    driverPayoutShare: DRIVER_PAYOUT_SHARE,
-    ownerProfitShare: OWNER_PROFIT_SHARE,
+    driverPayoutShare: settings.driverShare,
+    ownerProfitShare: round2(1 - settings.driverShare),
     bonusPoolRate: settings.bonusPoolRate,
     referralRewardAmount: settings.referralRewardAmount,
     deliveryFee: settings.deliveryFee,
@@ -278,7 +273,7 @@ export async function computeFinanceSnapshot(period: EarningsPeriod): Promise<Fi
 }
 
 /** Owner's share (total − driver payout) of COD on delivered orders not yet settled to payment_received. */
-async function computeCodInTransit(): Promise<number> {
+async function computeCodInTransit(settings: StoreSettings): Promise<number> {
   const { data: deliveredOrders } = await supabaseAdmin
     .from('orders')
     .select('*')
@@ -314,19 +309,11 @@ async function computeCodInTransit(): Promise<number> {
 
   let ownerShare = 0
   for (const order of outstanding as Order[]) {
-    const payout = calculatePayout({
-      subtotal: order.subtotal,
-      deliveryFee: order.delivery_fee,
-      discount: order.discount,
-      total: order.total,
-      costOfGoods: costMap.get(order.id) ?? 0,
-      driverIsOwner: order.driver_id ? ownerDriverIds.has(order.driver_id) : false,
-      partnerCommissionRate: 0,
-      affiliateCommissionOverride: commissionByOrder.get(order.id) ?? 0,
-    })
+    const driverIsOwner = order.driver_id ? ownerDriverIds.has(order.driver_id) : false
+    const { driverPayout } = resolvePayout(order, costMap.get(order.id) ?? 0, driverIsOwner, commissionByOrder.get(order.id) ?? 0, settings)
     // If the owner delivered it themselves, driverPayout is 0 and the whole
     // total is already in the owner's hands.
-    ownerShare += order.total - payout.driverPayout
+    ownerShare += order.total - driverPayout
   }
 
   return round2(ownerShare)
@@ -345,7 +332,8 @@ interface WindowFigures {
 }
 
 /** All trailing-window aggregates used for burn, acquisition and simulator baselines. */
-async function computeWindow(windowStart: Date, bonusPoolRate: number): Promise<WindowFigures> {
+async function computeWindow(windowStart: Date, settings: StoreSettings): Promise<WindowFigures> {
+  const bonusPoolRate = settings.bonusPoolRate
   const iso = windowStart.toISOString()
 
   const [{ data: orders }, { data: approvedReferrals }, { count: newCustomers }] = await Promise.all([
@@ -384,17 +372,8 @@ async function computeWindow(windowStart: Date, bonusPoolRate: number): Promise<
     // The pool is funded on every non-owner-driver delivery — same rule as
     // markDelivered — so accumulate owner net on exactly those orders.
     if (order.driver_id && !ownerDriverIds.has(order.driver_id)) {
-      const payout = calculatePayout({
-        subtotal: order.subtotal,
-        deliveryFee: order.delivery_fee,
-        discount: order.discount,
-        total: order.total,
-        costOfGoods: costMap.get(order.id) ?? 0,
-        driverIsOwner: false,
-        partnerCommissionRate: 0,
-        affiliateCommissionOverride: commissionByOrder.get(order.id) ?? 0,
-      })
-      poolableOwnerNet += payout.ownerNet
+      const { ownerNet } = resolvePayout(order, costMap.get(order.id) ?? 0, false, commissionByOrder.get(order.id) ?? 0, settings)
+      poolableOwnerNet += ownerNet
     }
   }
 

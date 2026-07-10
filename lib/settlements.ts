@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabase'
-import { calculatePayout } from '@/lib/calculations'
+import { resolvePayout } from '@/lib/earnings'
+import { getSettings } from '@/lib/settings'
 import { getBrisbaneDateString } from '@/lib/store-hours'
 import { getUnsettledGrants, markSettlementGrantsPaid } from '@/lib/driver-pool'
 import { notifyOwner, sendMessage } from '@/lib/telegram'
@@ -63,23 +64,19 @@ export async function createDriverSettlement(driverId: string, proposedBy: strin
     return { ok: false, error: 'No unsettled deliveries or bonuses for this driver' }
   }
 
-  const costOfGoodsMap = await costOfGoodsByOrder(eligibleOrders.map((o) => o.id))
+  const [costOfGoodsMap, settings] = await Promise.all([
+    costOfGoodsByOrder(eligibleOrders.map((o) => o.id)),
+    getSettings(),
+  ])
 
   let totalCash = 0
   let cashShare = 0
   for (const order of eligibleOrders) {
-    const costOfGoods = costOfGoodsMap.get(order.id) ?? 0
-    const payout = calculatePayout({
-      subtotal: order.subtotal,
-      deliveryFee: order.delivery_fee,
-      discount: order.discount,
-      total: order.total,
-      costOfGoods,
-      driverIsOwner: driver.is_owner,
-      partnerCommissionRate: 0,
-    })
+    // Prefer the driver-payout snapshot frozen at delivery (decision D5); the
+    // commission snapshot is irrelevant here (driver payout doesn't depend on it).
+    const { driverPayout } = resolvePayout(order, costOfGoodsMap.get(order.id) ?? 0, driver.is_owner, 0, settings)
     totalCash += order.total
-    cashShare += payout.driverPayout
+    cashShare += driverPayout
   }
 
   const payoutAmount = cashShare + grantsTotal

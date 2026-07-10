@@ -1,6 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabase'
 import { calculatePayout, calculateBonusPoolContribution } from '@/lib/calculations'
-import { getSettings } from '@/lib/settings'
+import { getSettings, type StoreSettings } from '@/lib/settings'
 import { getBrisbaneDateString } from '@/lib/store-hours'
 import type { Order, OrderItem } from '@/types/index'
 
@@ -65,43 +65,66 @@ export async function computeEarnings(start: Date | null): Promise<EarningsSumma
   const ownerDriverIds = new Set((drivers ?? []).filter((d) => d.is_owner).map((d) => d.id))
   const commissionByOrder = new Map((commissions ?? []).map((c) => [c.order_id, c.commission_amount]))
 
-  const { bonusPoolRate } = await getSettings()
+  const settings = await getSettings()
+  const { bonusPoolRate } = settings
 
   const summary: EarningsSummary = { ...EMPTY_SUMMARY, orderCount: orders.length }
 
   for (const order of orders as Order[]) {
-    const orderItems = itemsByOrder.get(order.id) ?? []
-    const costOfGoods = orderItems.reduce((sum, i) => sum + i.unit_cost_price * i.quantity, 0)
+    const commission = commissionByOrder.get(order.id) ?? 0
     const driverIsOwner = order.driver_id ? ownerDriverIds.has(order.driver_id) : false
+    const costOfGoods = (itemsByOrder.get(order.id) ?? []).reduce((sum, i) => sum + i.unit_cost_price * i.quantity, 0)
+    const { margin, driverPayout, ownerNet } = resolvePayout(order, costOfGoods, driverIsOwner, commission, settings)
 
-    const payout = calculatePayout({
-      subtotal: order.subtotal,
-      deliveryFee: order.delivery_fee,
-      discount: order.discount,
-      total: order.total,
-      costOfGoods,
-      driverIsOwner,
-      partnerCommissionRate: 0,
-      affiliateCommissionOverride: commissionByOrder.get(order.id) ?? 0,
-    })
-
-    summary.grossRevenue += payout.revenue
-    summary.grossProfit += payout.grossProfit
-    summary.driverPayouts += payout.driverPayout
-    summary.affiliateCommissions += payout.affiliateCommission
-    summary.ownerNet += payout.ownerNet
+    summary.grossRevenue += order.total
+    summary.grossProfit += margin
+    summary.driverPayouts += driverPayout
+    summary.affiliateCommissions += commission
+    summary.ownerNet += ownerNet
 
     // The pool is funded on every non-owner-driver delivery (see markDelivered
     // in lib/orders.ts) — mirror that exactly so the finance view reconciles
     // with what actually lands in driver pool balances.
     if (order.driver_id && !driverIsOwner) {
-      summary.bonusPoolContributions += calculateBonusPoolContribution(payout.ownerNet, bonusPoolRate)
+      summary.bonusPoolContributions += calculateBonusPoolContribution(ownerNet, bonusPoolRate)
     }
   }
 
   summary.ownerTakeHome = summary.ownerNet - summary.bonusPoolContributions
 
   return round(summary)
+}
+
+/**
+ * Payout for a delivered order, preferring the snapshot frozen at delivery
+ * (decision D5) and falling back to a fresh calculatePayout only when the
+ * snapshot is missing (order delivered before migration 009 / its backfill).
+ * The commission is always the frozen snapshot amount.
+ */
+export function resolvePayout(
+  order: Order,
+  costOfGoods: number,
+  driverIsOwner: boolean,
+  commissionSnapshot: number,
+  settings: StoreSettings
+): { margin: number; driverPayout: number; ownerNet: number } {
+  if (order.margin != null && order.driver_payout != null && order.owner_net != null) {
+    return { margin: order.margin, driverPayout: order.driver_payout, ownerNet: order.owner_net }
+  }
+  const creditApplied = Math.round((order.subtotal + order.delivery_fee - order.discount - order.total) * 100) / 100
+  const payout = calculatePayout({
+    subtotal: order.subtotal,
+    discount: order.discount,
+    deliveryFee: order.delivery_fee,
+    creditApplied,
+    costOfGoods,
+    driverIsOwner,
+    partnerCommissionRate: 0,
+    affiliateCommissionOverride: commissionSnapshot,
+    driverShare: settings.driverShare,
+    ownerFloor: settings.ownerFloor,
+  })
+  return { margin: payout.margin, driverPayout: payout.driverPayout, ownerNet: payout.ownerNet }
 }
 
 export interface DailyRevenuePoint {

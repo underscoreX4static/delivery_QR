@@ -22,6 +22,8 @@ interface StoreSettings {
   bonusPoolRate: number
   referralRewardAmount: number
   startingCash: number
+  driverShare: number
+  ownerFloor: number
 }
 
 const DAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -163,6 +165,35 @@ export function SettingsBoard() {
             />
           </Field>
         </div>
+      </div>
+
+      <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
+        <h2 className="mb-3 font-serif text-base font-semibold text-foreground">Margin split & owner floor</h2>
+        <div className="flex flex-wrap gap-3">
+          <Field label="Driver share of margin (%)">
+            <input
+              type="number"
+              step="0.1"
+              value={Math.round(settings.driverShare * 1000) / 10}
+              onChange={(e) => update('driverShare', Number(e.target.value) / 100)}
+              className="w-24 rounded border border-border bg-surface px-2 py-1 text-xs text-foreground focus:border-primary focus:outline-none"
+            />
+          </Field>
+          <Field label="Owner floor (%, min 11)">
+            <input
+              type="number"
+              step="0.1"
+              value={Math.round(settings.ownerFloor * 1000) / 10}
+              onChange={(e) => update('ownerFloor', Number(e.target.value) / 100)}
+              className="w-24 rounded border border-border bg-surface px-2 py-1 text-xs text-foreground focus:border-primary focus:outline-none"
+            />
+          </Field>
+        </div>
+        <p className="mt-2 text-xs text-muted">
+          Commission is charged on the <b>margin</b> (product sell − cost, delivery excluded) and comes out of your
+          share. The owner floor is the fraction of your gross share that acquisition commissions can never clamp
+          below — enforced at a hard minimum of 11% whatever you enter. Owner share = 100% − driver share.
+        </p>
       </div>
 
       <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
