@@ -33,6 +33,7 @@ interface Snapshot {
   }
   pools: {
     driverPoolSetAside: number
+    acquisitionSpendWindow: number
     driverBonusesOwed: number
     commissionsOwed: number
     welcomeBonusesOwed: number
@@ -166,6 +167,7 @@ export function FinanceBoard() {
           <Card title="Argent engagé (pools)">
             <div className="flex flex-col divide-y divide-border/60">
               <PoolRow label="Budget pool livreurs (dispo à donner)" value={pools.driverPoolSetAside} muted />
+              <PoolRow label="Dépense acquisition (30j)" value={pools.acquisitionSpendWindow} muted />
               <PoolRow label="Bonus livreurs attribués, non payés" value={pools.driverBonusesOwed} />
               <PoolRow label="Commissions commerciales dues" value={pools.commissionsOwed} />
               <PoolRow label="Primes de bienvenue dues" value={pools.welcomeBonusesOwed} />

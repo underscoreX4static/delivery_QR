@@ -1,6 +1,7 @@
 import { supabaseAdmin } from '@/lib/supabase'
 import { computeEarnings, resolvePayout, type EarningsSummary } from '@/lib/earnings'
 import { getPoolBalance, getTotalUnpaidGrants } from '@/lib/driver-pool'
+import { getAcquisitionSpend } from '@/lib/growth-pool'
 import { getSettings, type StoreSettings } from '@/lib/settings'
 import { getBrisbanePeriodStart, type EarningsPeriod } from '@/lib/store-hours'
 import type { Order, OrderItem } from '@/types/index'
@@ -36,8 +37,10 @@ export interface FinanceRates {
 }
 
 export interface FinancePools {
-  /** Global driver bonus pool budget still available to grant (settings.driver_pool_balance). */
+  /** Driver-bonus pocket balance still available to grant (opening + growth-pool ledger). */
   driverPoolSetAside: number
+  /** Acquisition pocket spend over the trailing window (commission + promo + referral credit), from the ledger. Forward-only since the ledger started. */
+  acquisitionSpendWindow: number
   /** Unpaid driver bonus grants — bonuses already handed out from the pool, awaiting settlement. */
   driverBonusesOwed: number
   /** Unpaid affiliate commissions across all commercials. */
@@ -147,6 +150,7 @@ export async function computeFinanceSnapshot(period: EarningsPeriod): Promise<Fi
 
   const [
     driverPoolSetAside,
+    acquisitionSpendWindow,
     driverBonusesOwed,
     unpaidCommissions,
     creditFloatRows,
@@ -155,6 +159,7 @@ export async function computeFinanceSnapshot(period: EarningsPeriod): Promise<Fi
     allCommissions,
   ] = await Promise.all([
     getPoolBalance(),
+    getAcquisitionSpend(windowStart.toISOString()),
     getTotalUnpaidGrants(),
     supabaseAdmin.from('affiliate_commissions').select('commission_amount').eq('paid_out', false),
     supabaseAdmin.from('users').select('credit_balance'),
@@ -203,6 +208,7 @@ export async function computeFinanceSnapshot(period: EarningsPeriod): Promise<Fi
 
   const pools: FinancePools = {
     driverPoolSetAside,
+    acquisitionSpendWindow,
     driverBonusesOwed,
     commissionsOwed,
     welcomeBonusesOwed,

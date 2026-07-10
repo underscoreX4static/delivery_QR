@@ -3,6 +3,7 @@ import { commitConsumption, refundConsumption } from '@/lib/inventory'
 import { calculateBonusPoolContribution, calculatePayout } from '@/lib/calculations'
 import { getSettings } from '@/lib/settings'
 import { contributeToPool } from '@/lib/driver-pool'
+import { recordPoolMovement } from '@/lib/growth-pool'
 import { settleReferralsForUser } from '@/lib/referrals'
 import { notifyOwner, sendMessage } from '@/lib/telegram'
 import type { Order, OrderItem, OrderStatus } from '@/types/index'
@@ -191,10 +192,25 @@ export async function markDelivered(orderId: string, changedBy: string): Promise
       }
     }
 
-    // Fund the global driver bonus pool from owner net (non-owner deliveries only).
+    // Fund the driver-bonus pocket of the growth pool from owner net (non-owner
+    // deliveries only).
     if (order.driver_id && !driverIsOwner) {
       const contribution = calculateBonusPoolContribution(payout.ownerNet, settings.bonusPoolRate)
-      await contributeToPool(contribution)
+      await contributeToPool(contribution, order.id)
+    }
+
+    // Track owner-borne acquisition spend in the growth pool's acquisition
+    // pocket: commission + promo discount + referral credit (all D2 owner costs
+    // realised at delivery). Audit-only, keeps acquisition reportable apart from
+    // driver bonuses.
+    if (payout.affiliateCommission > 0) {
+      await recordPoolMovement('acquisition', 'out', payout.affiliateCommission, { orderId: order.id, reference: 'commission' })
+    }
+    if (order.discount > 0) {
+      await recordPoolMovement('acquisition', 'out', order.discount, { orderId: order.id, reference: 'promo_discount' })
+    }
+    if (creditApplied > 0) {
+      await recordPoolMovement('acquisition', 'out', creditApplied, { orderId: order.id, reference: 'referral_credit' })
     }
   } catch (err) {
     console.error(`Delivery side effects failed for order ${orderId}:`, err)

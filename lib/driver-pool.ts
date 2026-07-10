@@ -1,62 +1,28 @@
 import { supabaseAdmin } from '@/lib/supabase'
 import { sendMessage } from '@/lib/telegram'
+import { getDriverBonusBalance, recordPoolMovement } from '@/lib/growth-pool'
 import type { DriverBonusGrant } from '@/types/index'
 
-// The driver bonus pool is a SINGLE global budget (settings key
-// `driver_pool_balance`), funded by a share of owner net on every
-// non-owner-driver delivery (see markDelivered). The owner draws discretionary
-// fixed bonuses from it and grants them to any driver(s); grants are paid out
-// with the driver's settlement. This replaces the old per-driver auto-pool +
-// fixed milestones — the driver's regular cut (delivery fee + 38%) is
-// unchanged and lives entirely in lib/calculations.ts.
-
-const POOL_KEY = 'driver_pool_balance'
-const BALANCE_UPDATE_RETRY_ATTEMPTS = 8
+// The driver bonus pool is the 'driver_bonus' pocket of the growth pool ledger
+// (lib/growth-pool.ts): funded by a share of owner net on every non-owner-driver
+// delivery (in), drawn down by discretionary grants (out). Its balance is the
+// frozen opening (settings.driver_pool_balance) plus the ledger net. Grants are
+// paid out with the driver's settlement. The driver's regular cut (delivery fee
+// + 38% of margin) is unchanged and lives entirely in lib/calculations.ts.
 
 function round2(n: number): number {
   return Math.round((n + Number.EPSILON) * 100) / 100
 }
 
-/** Current global pool budget. Missing key (migration not yet run) reads as 0. */
+/** Current driver-bonus pocket balance (opening + ledger). */
 export async function getPoolBalance(): Promise<number> {
-  const { data } = await supabaseAdmin.from('settings').select('value').eq('key', POOL_KEY).single()
-  return data ? Number(data.value) : 0
+  return getDriverBonusBalance()
 }
 
-/**
- * Adjusts the global pool balance by delta, with optimistic-concurrency retry
- * (same guard pattern as lib/inventory.ts) so a delivery contribution and a
- * grant landing together can't clobber each other. Upserts the row if the
- * migration seeded it late.
- */
-async function adjustPoolBalance(delta: number): Promise<void> {
-  for (let attempt = 0; attempt < BALANCE_UPDATE_RETRY_ATTEMPTS; attempt++) {
-    const { data: row } = await supabaseAdmin.from('settings').select('value').eq('key', POOL_KEY).single()
-
-    if (!row) {
-      const { error } = await supabaseAdmin
-        .from('settings')
-        .insert({ key: POOL_KEY, value: String(round2(delta)) })
-      if (!error) return
-      continue // someone else inserted first — loop and update instead
-    }
-
-    const current = Number(row.value)
-    const { error, count } = await supabaseAdmin
-      .from('settings')
-      .update({ value: String(round2(current + delta)), updated_at: new Date().toISOString() }, { count: 'exact' })
-      .eq('key', POOL_KEY)
-      .eq('value', row.value)
-
-    if (!error && count) return
-  }
-  throw new Error('Failed to adjust driver pool balance: too much concurrent contention')
-}
-
-/** Sets aside a slice of owner net from one delivered order into the global pool. */
-export async function contributeToPool(amount: number): Promise<void> {
+/** Sets aside a slice of owner net from one delivered order into the driver-bonus pocket. */
+export async function contributeToPool(amount: number, orderId?: string): Promise<void> {
   if (amount <= 0) return
-  await adjustPoolBalance(amount)
+  await recordPoolMovement('driver_bonus', 'in', amount, { orderId, reference: 'delivery_contribution' })
 }
 
 export interface GrantResult {
@@ -100,7 +66,7 @@ export async function grantBonus(driverIds: string[], amount: number, note: stri
     return { ok: false, granted: 0, total: 0, newBalance: await getPoolBalance(), error: insertError.message }
   }
 
-  await adjustPoolBalance(-total)
+  await recordPoolMovement('driver_bonus', 'out', total, { reference: 'grant' })
 
   for (const d of targets) {
     if (!d.telegram_id) continue
