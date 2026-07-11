@@ -4,6 +4,7 @@ import { calculateBonusPoolContribution, calculatePayout } from '@/lib/calculati
 import { getSettings } from '@/lib/settings'
 import { contributeToPool } from '@/lib/driver-pool'
 import { recordPoolMovement } from '@/lib/growth-pool'
+import { isWelcomeBonusTriggered } from '@/lib/commission-rules'
 import { settleReferralsForUser } from '@/lib/referrals'
 import { notifyOwner, sendMessage } from '@/lib/telegram'
 import type { Order, OrderItem, OrderStatus } from '@/types/index'
@@ -185,7 +186,7 @@ export async function markDelivered(orderId: string, changedBy: string): Promise
       })
 
       const triggerOrders = partner.welcome_bonus_trigger_orders ?? 1
-      if ((priorCommissions ?? 0) === triggerOrders - 1) {
+      if (isWelcomeBonusTriggered(priorCommissions ?? 0, triggerOrders)) {
         await notifyFirstSaleBonus(partnerId, partner.first_sale_bonus_amount ?? 10, triggerOrders).catch((err) => {
           console.error(`Welcome bonus notification failed for order ${orderId}:`, err)
         })

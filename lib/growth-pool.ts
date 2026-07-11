@@ -1,5 +1,5 @@
 import { supabaseAdmin } from '@/lib/supabase'
-import { poolBalanceFromMovements, type PoolCategory, type PoolDirection } from '@/lib/growth-pool-rules'
+import { acquisitionSpendFromMovements, poolBalanceFromMovements, type PoolCategory, type PoolDirection } from '@/lib/growth-pool-rules'
 
 /**
  * The growth pool ledger (append-only, table pool_movements — see migration
@@ -54,7 +54,5 @@ export async function getAcquisitionSpend(sinceIso?: string): Promise<number> {
   let query = supabaseAdmin.from('pool_movements').select('direction, amount').eq('category', 'acquisition')
   if (sinceIso) query = query.gte('created_at', sinceIso)
   const { data } = await query
-  let spend = 0
-  for (const m of data ?? []) spend += m.direction === 'out' ? m.amount : -m.amount
-  return round2(spend)
+  return acquisitionSpendFromMovements((data as { direction: PoolDirection; amount: number }[]) ?? [])
 }

@@ -16,3 +16,10 @@ export function poolBalanceFromMovements(
   for (const m of movements) balance += m.direction === 'in' ? m.amount : -m.amount
   return round2(balance)
 }
+
+/** Acquisition spend = out − in across a set of acquisition movements. */
+export function acquisitionSpendFromMovements(movements: { direction: PoolDirection; amount: number }[]): number {
+  let spend = 0
+  for (const m of movements) spend += m.direction === 'out' ? m.amount : -m.amount
+  return round2(spend)
+}

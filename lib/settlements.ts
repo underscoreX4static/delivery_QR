@@ -3,8 +3,12 @@ import { resolvePayout } from '@/lib/earnings'
 import { getSettings } from '@/lib/settings'
 import { getBrisbaneDateString } from '@/lib/store-hours'
 import { getUnsettledGrants, markSettlementGrantsPaid } from '@/lib/driver-pool'
+import { settlementPeriod } from '@/lib/settlement-rules'
 import { notifyOwner, sendMessage } from '@/lib/telegram'
 import type { OrderItem, Settlement } from '@/types/index'
+
+// Re-exported so existing importers of '@/lib/settlements' keep working.
+export { parsePartnerIdFromNotes } from '@/lib/settlement-rules'
 
 type Result = { ok: true; settlement: Settlement } | { ok: false; error: string }
 
@@ -82,9 +86,8 @@ export async function createDriverSettlement(driverId: string, proposedBy: strin
   const payoutAmount = cashShare + grantsTotal
 
   // Period spans the orders; fall back to today when it's a bonus-only settlement.
-  const orderDates = eligibleOrders.map((o) => getBrisbaneDateString(new Date(o.created_at))).sort()
-  const periodStart = orderDates[0] ?? getBrisbaneDateString(new Date())
-  const periodEnd = orderDates[orderDates.length - 1] ?? periodStart
+  const orderDates = eligibleOrders.map((o) => getBrisbaneDateString(new Date(o.created_at)))
+  const { periodStart, periodEnd } = settlementPeriod(orderDates, getBrisbaneDateString(new Date()))
 
   const { data: settlement, error } = await supabaseAdmin
     .from('settlements')
@@ -364,10 +367,6 @@ export async function deleteSettlement(settlementId: string): Promise<{ ok: true
 
   if (error) return { ok: false, error: error.message }
   return { ok: true }
-}
-
-export function parsePartnerIdFromNotes(notes: string | null): string | null {
-  return notes?.match(/^partner:([0-9a-f-]{36})$/i)?.[1] ?? null
 }
 
 function round2(n: number): number {

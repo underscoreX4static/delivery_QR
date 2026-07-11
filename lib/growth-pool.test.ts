@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { poolBalanceFromMovements } from './growth-pool-rules'
+import { acquisitionSpendFromMovements, poolBalanceFromMovements } from './growth-pool-rules'
 
 describe('poolBalanceFromMovements — pocket balance = opening + ledger net', () => {
   it('opening balance with no movements', () => {
@@ -21,5 +21,24 @@ describe('poolBalanceFromMovements — pocket balance = opening + ledger net', (
 
   it('rounds to cents', () => {
     expect(poolBalanceFromMovements(0, [{ direction: 'in' as const, amount: 0.1 }, { direction: 'in' as const, amount: 0.2 }])).toBe(0.3)
+  })
+})
+
+describe('acquisitionSpendFromMovements — spend = out − in', () => {
+  it('sums outs (commission + promo + credit) as spend', () => {
+    const movements = [
+      { direction: 'out' as const, amount: 6 }, // commission
+      { direction: 'out' as const, amount: 20 }, // promo discount
+      { direction: 'out' as const, amount: 5 }, // referral credit
+    ]
+    expect(acquisitionSpendFromMovements(movements)).toBe(31)
+  })
+
+  it('nets any refund-style ins back out of the spend', () => {
+    expect(acquisitionSpendFromMovements([{ direction: 'out' as const, amount: 20 }, { direction: 'in' as const, amount: 5 }])).toBe(15)
+  })
+
+  it('no movements = zero spend', () => {
+    expect(acquisitionSpendFromMovements([])).toBe(0)
   })
 })
